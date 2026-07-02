@@ -1,0 +1,64 @@
+name: biosense
+description: BioSense v1.0 — Early Homeostasis Deviation Alert | ALTEA-GARAY HTS
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # Estado de la app (Provider Pattern)
+  provider: ^6.1.2
+
+  # Internacionalización nativa (Español / Inglés)
+  flutter_localizations:
+    sdk: flutter
+  intl: ^0.19.0
+
+  # BLE — Bluetooth Low Energy (ESP32-C3 SuperMini)
+  flutter_blue_plus: ^1.31.7
+
+  # Gráficas para Clinical View
+  fl_chart: ^0.68.0
+
+  # Reporte PDF para el médico
+  pdf: ^3.10.8
+  printing: ^5.12.0
+
+  # Persistencia local (perfil, baseline, eventos)
+  shared_preferences: ^2.2.3
+
+  # Animaciones (caritas, estados)
+  lottie: ^3.1.0
+
+  # MODO VOZ — Altea te habla al oído
+  flutter_tts: ^3.8.0
+
+  # MODO FAMILIA — QR + Firebase + Seguridad
+  qr_flutter: ^4.1.0
+  mobile_scanner: ^3.5.7
+  firebase_core: ^2.32.0
+  firebase_messaging: ^14.9.4
+  cloud_firestore: ^4.17.5
+  crypto: ^3.0.5
+
+  # Notificaciones locales
+  flutter_local_notifications: ^17.2.4
+
+  # Íconos
+  cupertino_icons: ^1.0.6
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.0
+
+flutter:
+  uses-material-design: true
+  generate: true
+  assets:
+    - assets/animations/
+    - assets/images/
