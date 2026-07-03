@@ -17,6 +17,7 @@ enum BleConnectionStatus { disconnected, scanning, connecting, connected, error 
 
 class BleService {
   BluetoothDevice? _device;
+  // ignore: unused_field
   BluetoothCharacteristic? _characteristic;
   StreamSubscription? _scanSub;
   StreamSubscription? _dataSub;
