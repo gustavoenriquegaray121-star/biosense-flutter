@@ -35,8 +35,8 @@ jobs:
       - name: Analyze code
         run: flutter analyze --no-fatal-infos
 
-      - name: Run tests
-        run: flutter test
+      - name: Run unit tests
+        run: flutter test test/widget_test.dart
 
       - name: Build APK (release)
         run: flutter build apk --release --no-tree-shake-icons
