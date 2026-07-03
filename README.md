@@ -1,8 +1,7 @@
 🫀 BioSense v1.0 — Early Homeostasis Deviation Alert
 Powered by Phoenix-UCC v7.3 predictive architecture | ALTEA-GARAY HTS
 "Tu cuerpo habla antes que los síntomas."
-�
-Cargar imagen
+
 ¿Qué es BioSense?
 BioSense aplica la misma arquitectura predictiva que previene quench events en sistemas cuánticos criogénicos (Phoenix-UCC v7.3) al dominio de la fisiología humana.
 No diagnostica enfermedades. Detecta desviaciones tempranas del equilibrio fisiológico de cada persona con hasta 48 horas de anticipación antes de que aparezcan síntomas.
@@ -60,6 +59,7 @@ lib/
 └── main.dart
 firmware/
 └── biosense_band.ino           # ESP32-C3 SuperMini firmware
+
 Características Principales
 DHSI — Dynamic Homeostatic Stability Index (0–100%)
 Filtro de Kalman por canal (HRV, Temperatura, Respiración, GSR)
@@ -110,4 +110,5 @@ Digital Twin (live 3+ months): codepen.io/Gustavo-Enrique-Garay/pen/GgrvGyj
 DARPA submissions: SN-26-76 (Robotics), SN-26-71 (IPTO), QBIT PA-021
 Inventor
 Gustavo Enrique Garay | ALTEA-GARAY HTS Quantum Infrastructure | Monterrey, México
+
 ⚠️ Aviso: BioSense es un sistema de alerta predictiva. No sustituye diagnóstico médico profesional.
