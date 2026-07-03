@@ -1,8 +1,6 @@
 // ============================================================
-// BIOSENSE — BLE Service
-// Comunicación con la pulsera ESP32-C3 SuperMini
-// Lee paquete binario TelemetryPacket de 16 bytes:
-//   [4B hrv float][4B temp float][4B resp float][4B gsr float]
+// BIOSENSE — BLE Service v1.14 compatible
+// flutter_blue_plus: 1.14.0
 // ============================================================
 
 import 'dart:async';
@@ -17,15 +15,16 @@ enum BleConnectionStatus { disconnected, scanning, connecting, connected, error 
 
 class BleService {
   BluetoothDevice? _device;
-  // ignore: unused_field
-  BluetoothCharacteristic? _characteristic;
   StreamSubscription? _scanSub;
   StreamSubscription? _dataSub;
 
-  final _rawMetricsController = StreamController<Map<String, double>>.broadcast();
-  Stream<Map<String, double>> get rawMetricsStream => _rawMetricsController.stream;
+  final _rawMetricsController =
+      StreamController<Map<String, double>>.broadcast();
+  Stream<Map<String, double>> get rawMetricsStream =>
+      _rawMetricsController.stream;
 
-  final _statusController = StreamController<BleConnectionStatus>.broadcast();
+  final _statusController =
+      StreamController<BleConnectionStatus>.broadcast();
   Stream<BleConnectionStatus> get statusStream => _statusController.stream;
 
   BleConnectionStatus _status = BleConnectionStatus.disconnected;
@@ -36,20 +35,15 @@ class BleService {
     _statusController.add(s);
   }
 
-  // ── Buscar y conectar con la pulsera
   Future<void> startScan() async {
     if (_status == BleConnectionStatus.scanning ||
         _status == BleConnectionStatus.connected) return;
     _setStatus(BleConnectionStatus.scanning);
-
     try {
-      await FlutterBluePlus.startScan(
-        timeout: const Duration(seconds: 10),
-        withNames: [kDeviceName],
-      );
+      FlutterBluePlus.startScan(timeout: const Duration(seconds: 10));
       _scanSub = FlutterBluePlus.scanResults.listen((results) async {
         for (final r in results) {
-          if (r.device.platformName == kDeviceName) {
+          if (r.device.localName == kDeviceName) {
             await FlutterBluePlus.stopScan();
             await _connect(r.device);
             break;
@@ -67,22 +61,19 @@ class BleService {
     try {
       await device.connect(autoConnect: false);
       _setStatus(BleConnectionStatus.connected);
-
       final services = await device.discoverServices();
       for (final s in services) {
         if (s.uuid.toString().toUpperCase() == kServiceUuid.toUpperCase()) {
           for (final c in s.characteristics) {
             if (c.uuid.toString().toUpperCase() == kCharUuid.toUpperCase()) {
-              _characteristic = c;
               await c.setNotifyValue(true);
-              _dataSub = c.onValueReceived.listen(_onData);
+              _dataSub = c.value.listen(_onData);
             }
           }
         }
       }
-
-      device.connectionState.listen((state) {
-        if (state == BluetoothConnectionState.disconnected) {
+      device.state.listen((state) {
+        if (state == BluetoothDeviceState.disconnected) {
           _setStatus(BleConnectionStatus.disconnected);
         }
       });
@@ -91,35 +82,25 @@ class BleService {
     }
   }
 
-  // ── Parsear el TelemetryPacket de 16 bytes del firmware
   void _onData(List<int> bytes) {
     if (bytes.length < 16) return;
     final buffer = Uint8List.fromList(bytes).buffer;
     final view = ByteData.view(buffer);
-
     final hrv  = view.getFloat32(0,  Endian.little);
     final temp = view.getFloat32(4,  Endian.little);
     final resp = view.getFloat32(8,  Endian.little);
     final gsr  = view.getFloat32(12, Endian.little);
-
-    // Normalizar a escala 1.0 = basal (el firmware envía valores crudos)
     _rawMetricsController.add({
-      'hrv':  _normalizeHrv(hrv),
-      'temp': temp / 36.5,        // 36.5°C = basal humano
-      'resp': resp / 16.0,        // 16 rpm = basal humano
-      'gsr':  gsr / 100.0,        // normalización relativa
+      'hrv':  (hrv / 800.0).clamp(0.5, 1.5),
+      'temp': temp / 36.5,
+      'resp': resp / 16.0,
+      'gsr':  (gsr / 100.0).clamp(0.0, 2.0),
     });
   }
 
-  double _normalizeHrv(double rrIntervalMs) {
-    // RR interval típico en reposo: ~800ms. HRV alta = buena variabilidad.
-    if (rrIntervalMs <= 0) return 1.0;
-    return (rrIntervalMs / 800.0).clamp(0.5, 1.5);
-  }
-
-  // ── Modo simulación (desarrollo sin hardware)
+  // ── Modo simulación
   Timer? _mockTimer;
-  int _mockCycle = 0;
+  int    _mockCycle = 0;
   double _mockPerturbation = 0.0;
 
   void startMockMode({double perturbation = 0.0}) {
