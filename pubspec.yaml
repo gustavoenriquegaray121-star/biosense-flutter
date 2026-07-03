@@ -10,39 +10,25 @@ dependencies:
   flutter:
     sdk: flutter
 
-  # Estado de la app (Provider Pattern)
+  # Estado
   provider: ^6.1.2
 
-  # Internacionalización nativa (Español / Inglés)
+  # Internacionalización
   flutter_localizations:
     sdk: flutter
   intl: ^0.19.0
 
-  # BLE — Bluetooth Low Energy (ESP32-C3 SuperMini)
-  flutter_blue_plus: ^1.14.0
+  # Persistencia local
+  shared_preferences: ^2.2.3
 
-  # Gráficas para Clinical View
-  fl_chart: ^0.68.0
-
-  # Reporte PDF para el médico
+  # PDF para médico
   pdf: ^3.10.8
   printing: ^5.12.0
 
-  # Persistencia local (perfil, baseline, eventos)
-  shared_preferences: ^2.2.3
-
-  # Animaciones (caritas, estados)
-  lottie: ^3.1.0
-
-  # MODO VOZ — Altea te habla al oído
-  flutter_tts: ^3.8.0
-
-  # MODO FAMILIA — QR + Firebase + Seguridad
+  # QR
   qr_flutter: ^4.1.0
-  mobile_scanner: ^3.5.7
-  firebase_core: ^2.32.0
-  firebase_messaging: ^14.9.4
-  cloud_firestore: ^4.17.5
+
+  # Seguridad tokens
   crypto: ^3.0.5
 
   # Notificaciones locales
@@ -50,6 +36,12 @@ dependencies:
 
   # Íconos
   cupertino_icons: ^1.0.6
+
+  # BLE — versión fija comprobada
+  flutter_blue_plus: 1.14.0
+
+  # Voz
+  flutter_tts: ^3.8.0
 
 dev_dependencies:
   flutter_test:
