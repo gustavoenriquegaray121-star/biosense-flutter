@@ -67,13 +67,13 @@ class BleService {
           for (final c in s.characteristics) {
             if (c.uuid.toString().toUpperCase() == kCharUuid.toUpperCase()) {
               await c.setNotifyValue(true);
-              _dataSub = c.value.listen(_onData);
+              _dataSub = c.lastValueStream.listen(_onData);
             }
           }
         }
       }
-      device.state.listen((state) {
-        if (state == BluetoothDeviceState.disconnected) {
+      device.connectionState.listen((state) {
+        if (state == BluetoothConnectionState.disconnected) {
           _setStatus(BleConnectionStatus.disconnected);
         }
       });
