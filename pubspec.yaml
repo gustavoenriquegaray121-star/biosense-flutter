@@ -19,7 +19,7 @@ dependencies:
   intl: ^0.19.0
 
   # BLE — Bluetooth Low Energy (ESP32-C3 SuperMini)
-  flutter_blue_plus: ^1.31.7
+  flutter_blue_plus: ^1.14.0
 
   # Gráficas para Clinical View
   fl_chart: ^0.68.0
