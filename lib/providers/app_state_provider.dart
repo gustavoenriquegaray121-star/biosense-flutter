@@ -176,6 +176,11 @@ class AppStateProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<void> toggleEvent(EventType type) async {
+    await eventLog.toggleEvent(type);
+    notifyListeners();
+  }
+
   @override
   void dispose() {
     _healthSub?.cancel();
