@@ -18,13 +18,13 @@ class QuickLogBar extends StatelessWidget {
     required this.onEventAdded,
   });
 
-  static const _buttons = [
-    _Btn(EventType.cafe,      '☕', 'Café'),
-    _Btn(EventType.ejercicio, '🏃', 'Ejercicio'),
-    _Btn(EventType.estres,    '⚡', 'Estrés'),
-    _Btn(EventType.medicina,  '💊', 'Medicina'),
-    _Btn(EventType.comida,    '🍽️', 'Comida'),
-    _Btn(EventType.suenoMal,  '😴', 'Mal sueño'),
+  static List<_Btn> buttons(bool isEs) => [
+    _Btn(EventType.cafe,      '☕', isEs ? 'Café'      : 'Coffee'),
+    _Btn(EventType.ejercicio, '🏃', isEs ? 'Ejercicio' : 'Exercise'),
+    _Btn(EventType.estres,    '⚡', isEs ? 'Estrés'    : 'Stress'),
+    _Btn(EventType.medicina,  '💊', isEs ? 'Medicina'  : 'Medicine'),
+    _Btn(EventType.comida,    '🍽️', isEs ? 'Comida'    : 'Food'),
+    _Btn(EventType.suenoMal,  '😴', isEs ? 'Mal sueño' : 'Bad sleep'),
   ];
 
   @override
@@ -69,7 +69,7 @@ class QuickLogBar extends StatelessWidget {
           physics: const NeverScrollableScrollPhysics(),
           crossAxisCount: 3, childAspectRatio: 2.2,
           crossAxisSpacing: 8, mainAxisSpacing: 8,
-          children: _buttons.map((btn) {
+          children: buttons(isEs).map((btn) {
             final isActive = eventLog.activeEvents.any((e) => e.type == btn.type);
             return GestureDetector(
               onTap: () async {
@@ -77,7 +77,7 @@ class QuickLogBar extends StatelessWidget {
                 onEventAdded();
                 if (context.mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                    content: Text('${btn.emoji} ${btn.label} registrado ✅'),
+                    content: Text(isEs ? '${btn.emoji} ${btn.label} registrado ✅' : '${btn.emoji} ${btn.label} logged ✅'),
                     duration: const Duration(seconds: 2),
                     backgroundColor: const Color(0xFF1F4E79),
                     behavior: SnackBarBehavior.floating,
@@ -123,7 +123,7 @@ class QuickLogBar extends StatelessWidget {
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Text(
                 isEs
-                  ? '🔬 BioSense está descontando:'
+                  ? isEs ? '🔬 BioSense está descontando:' : '🔬 BioSense is removing:'
                   : '🔬 BioSense is removing:',
                 style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600,
                   color: Color(0xFF2E75B6))),
@@ -139,7 +139,7 @@ class QuickLogBar extends StatelessWidget {
               const SizedBox(height: 4),
               Text(
                 isEs
-                  ? 'La alerta ya tiene estos factores eliminados.'
+                  ? isEs ? 'La alerta ya tiene estos factores eliminados.' : 'The alert already has these factors removed.'
                   : 'The alert already has these factors removed.',
                 style: const TextStyle(fontSize: 10, color: Color(0xFF64748B),
                   fontStyle: FontStyle.italic)),
