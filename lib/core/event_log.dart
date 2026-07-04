@@ -196,6 +196,25 @@ class EventLog {
     await _save();
   }
 
+  // Desmarcar/quitar un evento activo
+  Future<void> removeEvent(EventType type) async {
+    _events.removeWhere((e) => e.type == type);
+    await _save();
+  }
+
+  // Toggle: si ya existe activo lo quita, si no existe lo agrega
+  Future<void> toggleEvent(EventType type) async {
+    final isActive = _events.any((e) => e.type == type && e.isActive);
+    if (isActive) {
+      await removeEvent(type);
+    } else {
+      await addEvent(type);
+    }
+  }
+
+  bool isActive(EventType type) =>
+      _events.any((e) => e.type == type && e.isActive);
+
   // ── Limpieza dinámica de datos (el factor diferenciador)
   // Calcula el offset total activo que debe restarse al DHSI
   // para eliminar los factores de confusión conocidos
