@@ -73,7 +73,7 @@ class QuickLogBar extends StatelessWidget {
             final isActive = eventLog.activeEvents.any((e) => e.type == btn.type);
             return GestureDetector(
               onTap: () async {
-                await context.read<AppStateProvider>().logEvent(btn.type);
+                await context.read<AppStateProvider>().toggleEvent(btn.type);
                 onEventAdded();
                 if (context.mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(SnackBar(
