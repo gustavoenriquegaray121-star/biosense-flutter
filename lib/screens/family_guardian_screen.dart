@@ -7,6 +7,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:qr_flutter/qr_flutter.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../providers/app_state_provider.dart';
 import '../core/guardian_manager.dart';
 
@@ -176,10 +177,10 @@ class _FamilyGuardianScreenState extends State<FamilyGuardianScreen>
     final familiars = [
       _FamiliarMock(isEs ? 'Mamá (Doña Mary)' : 'Mom (Doña Mary)',
         isEs ? 'Cambios tempranos — hace 2 horas' : 'Early changes — 2 hours ago',
-        'orange', const Color(0xFFF97316)),
+        'orange', const Color(0xFFF97316), phone: ''),
       _FamiliarMock(isEs ? 'Hijo (Danny)' : 'Son (Danny)',
         isEs ? 'Todo bien' : 'All good',
-        'green', const Color(0xFF22C55E)),
+        'green', const Color(0xFF22C55E), phone: ''),
     ];
 
     return Column(children: [
@@ -241,7 +242,7 @@ class _FamilyGuardianScreenState extends State<FamilyGuardianScreen>
 }
 
 class _FamiliarMock {
-  final String name, status, statusKey;
+  final String name, status, statusKey, phone;
   final Color color;
-  const _FamiliarMock(this.name, this.status, this.statusKey, this.color);
+  const _FamiliarMock(this.name, this.status, this.statusKey, this.color, {this.phone = ''});
 }
