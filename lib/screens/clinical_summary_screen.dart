@@ -210,20 +210,92 @@ class ClinicalSummaryScreen extends StatelessWidget {
   Future<void> _generatePdf(BuildContext context, AppStateProvider app,
       HealthState state, bool isEs) async {
     final pdf = pw.Document();
+    final dominant = _dominantChannel(state);
+
     pdf.addPage(pw.Page(pageFormat: PdfPageFormat.a4, build: (ctx) =>
       pw.Column(crossAxisAlignment: pw.CrossAxisAlignment.start, children: [
-        pw.Container(color: PdfColor.fromHex('1F4E79'), padding: const pw.EdgeInsets.all(16),
-          child: pw.Text('BioSense Clinical Report',
-            style: pw.TextStyle(fontSize: 20, fontWeight: pw.FontWeight.bold,
-              color: PdfColors.white))),
+
+        // Header
+        pw.Container(
+          color: PdfColor.fromHex('1F4E79'),
+          padding: const pw.EdgeInsets.all(16),
+          child: pw.Row(
+            mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+            children: [
+              pw.Text('BioSense Clinical Report',
+                style: pw.TextStyle(fontSize: 20, fontWeight: pw.FontWeight.bold,
+                  color: PdfColors.white)),
+              pw.Text('ALTEA-GARAY HTS',
+                style: pw.TextStyle(fontSize: 10, color: PdfColors.grey300)),
+            ])),
         pw.SizedBox(height: 16),
-        pw.Text('Paciente: ${app.userName}'),
-        pw.Text('DHSI: ${state.dhsi.toStringAsFixed(3)} (${state.dhsiPercentage}%)'),
-        pw.Text('Confianza del modelo: ${(state.confidenceLevel*100).round()}%'),
+
+        // Patient info
+        pw.Text(isEs ? 'Paciente: \${app.userName}' : 'Patient: \${app.userName}'),
+        pw.Text(isEs ? 'Fecha: \${DateTime.now().day}/\${DateTime.now().month}/\${DateTime.now().year}'
+                     : 'Date: \${DateTime.now().month}/\${DateTime.now().day}/\${DateTime.now().year}'),
         pw.SizedBox(height: 12),
-        pw.Text('AVISO: Este reporte es informativo. No constituye diagnóstico médico.',
-          style: pw.TextStyle(fontSize: 9, color: PdfColors.grey700)),
+
+        // Status
+        pw.Text(isEs ? 'ESTADO FISIOLÓGICO' : 'PHYSIOLOGICAL STATUS',
+          style: pw.TextStyle(fontSize: 11, fontWeight: pw.FontWeight.bold)),
+        pw.SizedBox(height: 6),
+        pw.Text(isEs
+          ? 'Índice DHSI: \${state.dhsi.toStringAsFixed(3)} (\${state.dhsiPercentage}%)'
+          : 'DHSI Index: \${state.dhsi.toStringAsFixed(3)} (\${state.dhsiPercentage}%)'),
+        pw.Text(isEs
+          ? 'Confianza del modelo: \${(state.confidenceLevel*100).round()}%'
+          : 'Model confidence: \${(state.confidenceLevel*100).round()}%'),
+        pw.Text(isEs
+          ? 'Canal dominante: \${_channelLabel(dominant, isEs)}'
+          : 'Dominant channel: \${_channelLabel(dominant, isEs)}'),
+        pw.SizedBox(height: 12),
+
+        // Variables
+        pw.Text(isEs ? 'VARIABLES MONITORIZADAS' : 'MONITORED VARIABLES',
+          style: pw.TextStyle(fontSize: 11, fontWeight: pw.FontWeight.bold)),
+        pw.SizedBox(height: 6),
+        pw.Text(isEs
+          ? 'Variabilidad FC (HRV): \${state.hrv.label}'
+          : 'Heart Rate Variability: \${state.hrv.label}'),
+        pw.Text(isEs
+          ? 'Temperatura basal: \${state.temp.label}'
+          : 'Baseline temperature: \${state.temp.label}'),
+        pw.Text(isEs
+          ? 'Patrón respiratorio: \${state.resp.label}'
+          : 'Breathing pattern: \${state.resp.label}'),
+        pw.Text(isEs
+          ? 'Respuesta galvánica (GSR): \${state.gsr.label}'
+          : 'Galvanic skin response: \${state.gsr.label}'),
+        pw.SizedBox(height: 12),
+
+        // Reasons
+        pw.Text(isEs ? 'FACTORES DETECTADOS' : 'DETECTED FACTORS',
+          style: pw.TextStyle(fontSize: 11, fontWeight: pw.FontWeight.bold)),
+        pw.SizedBox(height: 6),
+        ..._reasons(state, isEs).map((r) => pw.Padding(
+          padding: const pw.EdgeInsets.only(bottom: 4),
+          child: pw.Text('• \$r', style: pw.TextStyle(fontSize: 11)))),
+        pw.SizedBox(height: 16),
+
+        // Disclaimer
+        pw.Container(
+          padding: const pw.EdgeInsets.all(10),
+          color: PdfColors.grey100,
+          child: pw.Text(
+            isEs
+              ? 'AVISO: Este reporte es informativo. BioSense no emite diagnósticos médicos. La interpretación clínica corresponde exclusivamente al profesional de la salud.'
+              : 'NOTICE: This report is informational. BioSense does not issue medical diagnoses. Clinical interpretation belongs exclusively to the healthcare professional.',
+            style: pw.TextStyle(fontSize: 9, color: PdfColors.grey700))),
+
+        pw.SizedBox(height: 8),
+        pw.Text('USPTO #63/914,860 | ALTEA-GARAY HTS',
+          style: pw.TextStyle(fontSize: 8, color: PdfColors.grey500)),
       ])));
-    await Printing.layoutPdf(onLayout: (_) async => pdf.save());
+
+    await Printing.layoutPdf(
+      onLayout: (_) async => pdf.save(),
+      name: 'BioSense_Report_\${app.userName}.pdf',
+    );
   }
 }
