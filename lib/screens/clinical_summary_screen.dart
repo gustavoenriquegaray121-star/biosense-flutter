@@ -207,7 +207,25 @@ class ClinicalSummaryScreen extends StatelessWidget {
     );
   }
 
-  Future<void> _generatePdf(BuildContext context, AppStateProvider app,
+  String _statusText(ChannelStatus s, bool isEs) {
+    if (isEs) {
+      switch (s) {
+        case ChannelStatus.normal:   return 'Normal';
+        case ChannelStatus.leve:     return 'Ligero cambio';
+        case ChannelStatus.moderado: return 'Cambio notable';
+        case ChannelStatus.alto:     return 'Cambio importante';
+      }
+    } else {
+      switch (s) {
+        case ChannelStatus.normal:   return 'Normal';
+        case ChannelStatus.leve:     return 'Slight change';
+        case ChannelStatus.moderado: return 'Notable change';
+        case ChannelStatus.alto:     return 'Important change';
+      }
+    }
+  }
+
+    Future<void> _generatePdf(BuildContext context, AppStateProvider app,
       HealthState state, bool isEs) async {
     final pdf = pw.Document();
     final now = DateTime.now();
@@ -241,10 +259,10 @@ class ClinicalSummaryScreen extends StatelessWidget {
       pw.Text(isEs ? 'VARIABLES MONITORIZADAS' : 'MONITORED VARIABLES',
         style: pw.TextStyle(fontSize: 11, fontWeight: pw.FontWeight.bold)),
       pw.SizedBox(height: 6),
-      pw.Text((isEs ? 'Variabilidad FC (HRV): ' : 'Heart Rate Variability: ') + state.hrv.label),
-      pw.Text((isEs ? 'Temperatura basal: ' : 'Baseline temperature: ') + state.temp.label),
-      pw.Text((isEs ? 'Patrón respiratorio: ' : 'Breathing pattern: ') + state.resp.label),
-      pw.Text((isEs ? 'Respuesta galvánica (GSR): ' : 'Galvanic skin response: ') + state.gsr.label),
+      pw.Text((isEs ? 'Variabilidad FC (HRV): ' : 'Heart Rate Variability: ') + _statusText(state.hrv.status, isEs)),
+      pw.Text((isEs ? 'Temperatura basal: ' : 'Baseline temperature: ') + _statusText(state.temp.status, isEs)),
+      pw.Text((isEs ? 'Patrón respiratorio: ' : 'Breathing pattern: ') + _statusText(state.resp.status, isEs)),
+      pw.Text((isEs ? 'Respuesta galvánica (GSR): ' : 'Galvanic skin response: ') + _statusText(state.gsr.status, isEs)),
       pw.SizedBox(height: 12),
       pw.Text(isEs ? 'FACTORES DETECTADOS' : 'DETECTED FACTORS',
         style: pw.TextStyle(fontSize: 11, fontWeight: pw.FontWeight.bold)),
