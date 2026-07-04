@@ -210,8 +210,6 @@ class ClinicalSummaryScreen extends StatelessWidget {
   Future<void> _generatePdf(BuildContext context, AppStateProvider app,
       HealthState state, bool isEs) async {
     final pdf = pw.Document();
-    final dominant = _dominantChannel(state);
-
     pdf.addPage(pw.Page(pageFormat: PdfPageFormat.a4, build: (ctx) =>
       pw.Column(crossAxisAlignment: pw.CrossAxisAlignment.start, children: [
 
