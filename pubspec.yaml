@@ -37,6 +37,9 @@ dependencies:
   # Íconos
   cupertino_icons: ^1.0.6
 
+  # Llamadas telefónicas
+  url_launcher: ^6.3.0
+
   # BLE — versión fija comprobada
   flutter_blue_plus: 1.14.0
 
