@@ -1,238 +1,188 @@
 // ============================================================
-// BIOSENSE OS — Core Theme, Motion, Typography & Design Tokens
-// Visual Identity v1.4
+// BIOSENSE OS — Clinical Design System v2.0
+// Paleta Professional Premium — "Medical Grade"
 // Autor: Gustavo Enrique Garay | ALTEA-GARAY HTS
-// USPTO Provisional Patent #63/914,860
+// USPTO Provisional #63/914,860
 // ============================================================
 
 import 'package:flutter/material.dart';
 
 // ============================================================
-// MOTION — Sistema oficial de animaciones
-// "La app respira, no parpadea."
-// ============================================================
-class BioSenseMotion {
-  // Duraciones oficiales
-  static const Duration instant = Duration(milliseconds: 0);
-  static const Duration fast    = Duration(milliseconds: 120); // Micro-feedback
-  static const Duration normal  = Duration(milliseconds: 250); // Estándar UI
-  static const Duration slow    = Duration(milliseconds: 450); // Transiciones críticas
-  static const Duration slowest = Duration(milliseconds: 700); // Onboarding, drama
-
-  // Curvas oficiales — personalidad del movimiento
-  static const Curve enter   = Curves.easeOutCubic;   // Aparecer suave
-  static const Curve exit    = Curves.easeInCubic;    // Desaparecer rápido
-  static const Curve flow    = Curves.easeInOutCubic; // Cambios de estado DHSI
-  static const Curve bounce  = Curves.elasticOut;     // Alertas, eventos ARM
-  static const Curve precise = Curves.fastOutSlowIn;  // Datos numéricos
-}
-
-// ============================================================
-// DESIGN TOKENS — Constantes exportables a cualquier plataforma
-// Web / Android / iOS / Desktop / FPGA UI
-// ============================================================
-class BioSenseSpacing {
-  static const double xs  =  4.0;
-  static const double sm  =  8.0;
-  static const double md  = 12.0; // cardSpacing
-  static const double lg  = 16.0; // cardPadding
-  static const double xl  = 20.0; // screenPadding
-  static const double xxl = 28.0; // sectionSpacing
-  static const double xxxl= 40.0; // hero sections
-}
-
-class BioSenseRadius {
-  static const double sm   =  8.0;
-  static const double md   = 16.0;
-  static const double lg   = 24.0; // cardRadius — valor primario
-  static const double xl   = 32.0;
-  static const double full = 999.0; // píldoras, badges
-}
-
-class BioSenseElevation {
-  static const double flat    = 0.0; // Superficies base
-  static const double level1  = 2.0; // Tarjetas flotantes
-  static const double level2  = 4.0; // FAB, diálogos
-  static const double level3  = 8.0; // Navegación, alertas críticas
-}
-
-// ============================================================
-// COLOR — Paleta "Clinical-Tech"
+// COLOR — Paleta Clinical Premium
 // ============================================================
 class BioSenseColor {
-  // Fondos y superficies
-  static const Color bgTitanium  = Color(0xFFF8FAFC);
+  // Fondos
+  static const Color bgPrimary   = Color(0xFFF8FBFE); // Blanco azulado limpio
   static const Color surface     = Color(0xFFFFFFFF);
+  static const Color surfaceAlt  = Color(0xFFF0F4F8); // Cards alternadas
 
   // Identidad
-  static const Color primary     = Color(0xFF1E40AF); // Azul BioSense
-  static const Color accent      = Color(0xFF3B82F6); // Indicadores
+  static const Color primary     = Color(0xFF0A3D62); // Azul marino profundo
+  static const Color primaryLight= Color(0xFF1A5276); // Azul marino suave
+  static const Color accent      = Color(0xFF10AC84); // Verde salud suave
 
-  // Estados fisiológicos — sincronizados con statusKey del DHSIEngine
-  static const Color success     = Color(0xFF10B981); // ESTABLE
-  static const Color warning     = Color(0xFFF59E0B); // VIGILANCIA / FATIGA
-  static const Color danger      = Color(0xFFEF4444); // ALERTA
-  static const Color critical    = Color(0xFF8B5CF6); // CRÍTICO
+  // Estados fisiológicos — graduales, no chillones
+  static const Color stable      = Color(0xFF10AC84); // Verde salud
+  static const Color warning     = Color(0xFFF39C12); // Naranja suave
+  static const Color alert       = Color(0xFFE74C3C); // Rojo serio
+  static const Color critical    = Color(0xFF8E44AD); // Morado contenido
 
   // Texto
-  static const Color textPrimary = Color(0xFF0F172A);
-  static const Color textBody    = Color(0xFF334155);
-  static const Color textMuted   = Color(0xFF64748B);
-  static const Color textHint    = Color(0xFF94A3B8);
+  static const Color textPrimary = Color(0xFF2C3E50); // Gris oscuro
+  static const Color textBody    = Color(0xFF566573); // Gris medio
+  static const Color textMuted   = Color(0xFF95A5A6); // Gris claro
+  static const Color textHint    = Color(0xFFBDC3C7);
 
   // UI
-  static const Color border      = Color(0xFFE2E8F0);
-  static const Color borderFocus = Color(0xFF3B82F6);
+  static const Color border      = Color(0xFFE8EDF2);
+  static const Color borderFocus = Color(0xFF0A3D62);
+  static const Color divider     = Color(0xFFF0F4F8);
 
   // Mapeo directo desde statusKey del DHSIEngine
   static Color forStatus(String statusKey) {
     switch (statusKey) {
       case 'fatigue':  return warning;
-      case 'alert':    return danger;
-      case 'danger':   return danger;
+      case 'alert':    return alert;
+      case 'danger':   return alert;
       case 'critical': return critical;
-      default:         return success;
+      default:         return stable;
     }
   }
 
-  // Versión con opacidad para fondos de tarjetas
   static Color bgForStatus(String statusKey) =>
-      forStatus(statusKey).withOpacity(0.08);
+      forStatus(statusKey).withOpacity(0.06);
 }
 
 // ============================================================
-// SHADOWS — Neumorfismo sutil de precisión quirúrgica
+// MOTION — Sistema oficial de animaciones
+// ============================================================
+class BioSenseMotion {
+  static const Duration instant = Duration(milliseconds: 0);
+  static const Duration fast    = Duration(milliseconds: 150);
+  static const Duration normal  = Duration(milliseconds: 300);
+  static const Duration slow    = Duration(milliseconds: 500);
+  static const Duration slowest = Duration(milliseconds: 800);
+
+  static const Curve enter   = Curves.easeOutCubic;
+  static const Curve exit    = Curves.easeInCubic;
+  static const Curve flow    = Curves.easeInOutCubic;
+  static const Curve precise = Curves.fastOutSlowIn;
+}
+
+// ============================================================
+// SPACING — Tokens de diseño
+// ============================================================
+class BioSenseSpacing {
+  static const double xs   =  4.0;
+  static const double sm   =  8.0;
+  static const double md   = 12.0;
+  static const double lg   = 16.0;
+  static const double xl   = 20.0;
+  static const double xxl  = 28.0;
+  static const double xxxl = 40.0;
+}
+
+// ============================================================
+// RADIUS
+// ============================================================
+class BioSenseRadius {
+  static const double sm   =  8.0;
+  static const double md   = 12.0; // Cards — más contenido, menos redondo
+  static const double lg   = 16.0;
+  static const double xl   = 20.0;
+  static const double full = 999.0;
+}
+
+// ============================================================
+// SHADOWS — Neumorfismo sutil
 // ============================================================
 class BioSenseShadow {
-  // Sombra base: profundidad sin decoración
-  static List<BoxShadow> get level1 => [
+  static List<BoxShadow> get card => [
     BoxShadow(
-      color: const Color(0xFF0F172A).withOpacity(0.015),
-      blurRadius: 10,
+      color: const Color(0xFF0A3D62).withOpacity(0.06),
+      blurRadius: 12,
       offset: const Offset(0, 2),
     ),
     BoxShadow(
-      color: const Color(0xFF1E293B).withOpacity(0.015),
-      blurRadius: 20,
-      offset: const Offset(0, 4),
+      color: const Color(0xFF0A3D62).withOpacity(0.03),
+      blurRadius: 4,
+      offset: const Offset(0, 1),
     ),
   ];
 
-  // Sombra con tinte de estado fisiológico
   static List<BoxShadow> forStatus(String statusKey) => [
     BoxShadow(
-      color: BioSenseColor.forStatus(statusKey).withOpacity(0.08),
+      color: BioSenseColor.forStatus(statusKey).withOpacity(0.10),
       blurRadius: 16,
       offset: const Offset(0, 4),
     ),
-    ...level1,
-  ];
-
-  // Sombra de alerta — llama la atención sin gritar
-  static List<BoxShadow> get alert => [
-    BoxShadow(
-      color: BioSenseColor.danger.withOpacity(0.18),
-      blurRadius: 24,
-      spreadRadius: 2,
-      offset: const Offset(0, 6),
-    ),
-    ...level1,
+    ...card,
   ];
 }
 
 // ============================================================
-// TYPOGRAPHY — Escala tipográfica clínica
-// FontFeature.tabularFigures() para alinear números DHSI
+// TYPOGRAPHY — Escala clínica premium
 // ============================================================
 class BioSenseText {
-
-  // ── DISPLAY — Números héroe ──────────────────────────────
-  /// 92% en HomeScreen — el número más importante de la app
+  // Métricas numéricas — tabular figures para alineación
   static const TextStyle metricXL = TextStyle(
-    fontSize: 72,
-    fontWeight: FontWeight.w900,
-    letterSpacing: -2.0,
-    height: 1.0,
+    fontSize: 64, fontWeight: FontWeight.w300,
+    letterSpacing: -2.0, height: 1.0,
     color: BioSenseColor.textPrimary,
     fontFeatures: [FontFeature.tabularFigures()],
   );
-
-  /// DHSI en cards clínicas
   static const TextStyle metricL = TextStyle(
-    fontSize: 48,
-    fontWeight: FontWeight.w800,
-    letterSpacing: -1.5,
-    height: 1.0,
+    fontSize: 40, fontWeight: FontWeight.w300,
+    letterSpacing: -1.5, height: 1.0,
     color: BioSenseColor.textPrimary,
     fontFeatures: [FontFeature.tabularFigures()],
   );
-
-  /// 38.2°C, 74 bpm en cards secundarias
   static const TextStyle metricM = TextStyle(
-    fontSize: 28,
-    fontWeight: FontWeight.w700,
-    letterSpacing: -0.5,
-    height: 1.1,
+    fontSize: 24, fontWeight: FontWeight.w500,
+    letterSpacing: -0.5, height: 1.1,
     color: BioSenseColor.textPrimary,
     fontFeatures: [FontFeature.tabularFigures()],
   );
-
-  /// Valores en listas y tablas
   static const TextStyle metricS = TextStyle(
-    fontSize: 18,
-    fontWeight: FontWeight.w700,
-    letterSpacing: -0.3,
+    fontSize: 16, fontWeight: FontWeight.w600,
+    letterSpacing: -0.2,
     color: BioSenseColor.textPrimary,
     fontFeatures: [FontFeature.tabularFigures()],
   );
 
-  // ── TEXTO — Jerarquía editorial ──────────────────────────
-  /// "Mi Salud", "Historial" — títulos de pantalla
+  // Editorial
   static const TextStyle title = TextStyle(
-    fontSize: 22,
-    fontWeight: FontWeight.w700,
-    letterSpacing: 0.1,
-    color: BioSenseColor.textPrimary,
+    fontSize: 20, fontWeight: FontWeight.w700,
+    letterSpacing: -0.2, color: BioSenseColor.textPrimary,
   );
-
-  /// "Últimas 24h", subtítulos de sección
   static const TextStyle subtitle = TextStyle(
-    fontSize: 16,
-    fontWeight: FontWeight.w600,
-    letterSpacing: 0.15,
-    color: BioSenseColor.textBody,
+    fontSize: 14, fontWeight: FontWeight.w600,
+    letterSpacing: 0.1, color: BioSenseColor.textBody,
   );
-
-  /// Texto descriptivo y mensajes cotidianos
   static const TextStyle body = TextStyle(
-    fontSize: 14,
-    fontWeight: FontWeight.w500,
-    height: 1.55,
-    color: BioSenseColor.textBody,
+    fontSize: 13, fontWeight: FontWeight.w400,
+    height: 1.55, color: BioSenseColor.textBody,
   );
-
-  /// "Actualizado hace 2 min", notas de precisión
   static const TextStyle caption = TextStyle(
-    fontSize: 12,
-    fontWeight: FontWeight.w500,
-    height: 1.4,
-    color: BioSenseColor.textMuted,
+    fontSize: 11, fontWeight: FontWeight.w400,
+    height: 1.4, color: BioSenseColor.textMuted,
   );
-
-  /// "HRV", "TEMP", "RESP" — etiquetas técnicas en mayúsculas
   static const TextStyle label = TextStyle(
-    fontSize: 10,
-    fontWeight: FontWeight.w800,
-    letterSpacing: 1.5,
-    color: BioSenseColor.textMuted,
+    fontSize: 10, fontWeight: FontWeight.w700,
+    letterSpacing: 1.2, color: BioSenseColor.textMuted,
+  );
+  // Firma institucional — pie de página
+  static const TextStyle institutional = TextStyle(
+    fontSize: 10, fontWeight: FontWeight.w400,
+    letterSpacing: 0.5, color: BioSenseColor.textHint,
+    fontFamily: 'monospace',
   );
 }
 
 // ============================================================
-// THEME — ThemeData global de Flutter
+// THEME DATA GLOBAL
 // ============================================================
 class BioSenseTheme {
-
   static ThemeData get theme => ThemeData(
     useMaterial3: true,
     colorScheme: ColorScheme.fromSeed(
@@ -240,14 +190,15 @@ class BioSenseTheme {
       brightness: Brightness.light,
       surface: BioSenseColor.surface,
     ),
-    scaffoldBackgroundColor: BioSenseColor.bgTitanium,
+    scaffoldBackgroundColor: BioSenseColor.bgPrimary,
+    fontFamily: 'Inter',
     appBarTheme: AppBarTheme(
       backgroundColor: BioSenseColor.surface,
       elevation: 0,
-      scrolledUnderElevation: 0,
+      scrolledUnderElevation: 0.5,
+      shadowColor: BioSenseColor.border,
       centerTitle: false,
-      titleTextStyle: BioSenseText.title.copyWith(
-        color: BioSenseColor.primary, fontSize: 18),
+      titleTextStyle: BioSenseText.title.copyWith(fontSize: 17),
       iconTheme: const IconThemeData(color: BioSenseColor.primary),
     ),
     elevatedButtonTheme: ElevatedButtonThemeData(
@@ -255,34 +206,47 @@ class BioSenseTheme {
         backgroundColor: BioSenseColor.primary,
         foregroundColor: BioSenseColor.surface,
         elevation: 0,
+        shadowColor: Colors.transparent,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(BioSenseRadius.lg - 8)),
+          borderRadius: BorderRadius.circular(BioSenseRadius.md)),
         textStyle: BioSenseText.subtitle.copyWith(
-          color: BioSenseColor.surface, letterSpacing: 0.3),
+          color: BioSenseColor.surface, letterSpacing: 0.2),
+        padding: const EdgeInsets.symmetric(
+          horizontal: BioSenseSpacing.xl, vertical: BioSenseSpacing.lg),
       ),
     ),
     outlinedButtonTheme: OutlinedButtonThemeData(
       style: OutlinedButton.styleFrom(
         foregroundColor: BioSenseColor.primary,
-        side: const BorderSide(color: BioSenseColor.primary),
+        side: const BorderSide(color: BioSenseColor.primary, width: 1.5),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(BioSenseRadius.md)),
       ),
     ),
     navigationBarTheme: NavigationBarThemeData(
       backgroundColor: BioSenseColor.surface,
-      indicatorColor: BioSenseColor.primary.withOpacity(0.12),
+      indicatorColor: BioSenseColor.primary.withOpacity(0.10),
       elevation: 0,
-      shadowColor: Colors.transparent,
-      labelTextStyle: WidgetStateProperty.all(
-        BioSenseText.label.copyWith(letterSpacing: 0.5)),
+      height: 60,
+      labelTextStyle: WidgetStateProperty.resolveWith((states) {
+        final active = states.contains(WidgetState.selected);
+        return BioSenseText.label.copyWith(
+          color: active ? BioSenseColor.primary : BioSenseColor.textMuted,
+          letterSpacing: 0.5,
+        );
+      }),
+      iconTheme: WidgetStateProperty.resolveWith((states) {
+        final active = states.contains(WidgetState.selected);
+        return IconThemeData(
+          color: active ? BioSenseColor.primary : BioSenseColor.textMuted,
+          size: 22,
+        );
+      }),
     ),
     inputDecorationTheme: InputDecorationTheme(
-      filled: true,
-      fillColor: BioSenseColor.surface,
+      filled: true, fillColor: BioSenseColor.surface,
       contentPadding: const EdgeInsets.symmetric(
-        horizontal: BioSenseSpacing.lg,
-        vertical: BioSenseSpacing.md),
+        horizontal: BioSenseSpacing.lg, vertical: BioSenseSpacing.md),
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(BioSenseRadius.md),
         borderSide: const BorderSide(color: BioSenseColor.border)),
@@ -292,74 +256,188 @@ class BioSenseTheme {
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(BioSenseRadius.md),
         borderSide: const BorderSide(
-          color: BioSenseColor.borderFocus, width: 2)),
+          color: BioSenseColor.borderFocus, width: 1.5)),
     ),
-    cardTheme: CardTheme(
-      color: BioSenseColor.surface,
-      elevation: 0,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(BioSenseRadius.lg)),
-    ),
+    dividerTheme: const DividerThemeData(
+      color: BioSenseColor.divider, thickness: 1, space: 1),
     switchTheme: SwitchThemeData(
-      thumbColor: WidgetStateProperty.resolveWith((states) =>
-        states.contains(WidgetState.selected)
-          ? BioSenseColor.primary
-          : BioSenseColor.textHint),
-      trackColor: WidgetStateProperty.resolveWith((states) =>
-        states.contains(WidgetState.selected)
-          ? BioSenseColor.primary.withOpacity(0.3)
+      thumbColor: WidgetStateProperty.resolveWith((s) =>
+        s.contains(WidgetState.selected)
+          ? BioSenseColor.primary : BioSenseColor.textHint),
+      trackColor: WidgetStateProperty.resolveWith((s) =>
+        s.contains(WidgetState.selected)
+          ? BioSenseColor.primary.withOpacity(0.25)
           : BioSenseColor.border),
     ),
   );
 
-  // ── Contenedor clínico estandarizado ──────────────────────
-  /// Reemplaza Container() + BoxDecoration en toda la app.
-  /// Automáticamente aplica la sombra y el color del estado DHSI.
+  // ── Tarjeta clínica estandarizada
   static Widget clinicalCard({
     required Widget child,
     String? statusKey,
     EdgeInsets? padding,
-    Color? overrideColor,
+    Color? color,
     double? radius,
+    bool animate = true,
   }) {
+    final borderColor = statusKey != null
+        ? BioSenseColor.forStatus(statusKey).withOpacity(0.20)
+        : BioSenseColor.border;
     final shadows = statusKey != null
         ? BioSenseShadow.forStatus(statusKey)
-        : BioSenseShadow.level1;
-    final borderColor = statusKey != null
-        ? BioSenseColor.forStatus(statusKey).withOpacity(0.25)
-        : BioSenseColor.border;
+        : BioSenseShadow.card;
 
-    return AnimatedContainer(
-      duration: BioSenseMotion.slow,
-      curve: BioSenseMotion.flow,
-      decoration: BoxDecoration(
-        color: overrideColor ?? BioSenseColor.surface,
-        borderRadius: BorderRadius.circular(radius ?? BioSenseRadius.lg),
-        border: Border.all(color: borderColor, width: 1.2),
-        boxShadow: shadows,
+    final decoration = BoxDecoration(
+      color: color ?? BioSenseColor.surface,
+      borderRadius: BorderRadius.circular(radius ?? BioSenseRadius.md),
+      border: Border.all(color: borderColor, width: 1.0),
+      boxShadow: shadows,
+    );
+
+    final inner = ClipRRect(
+      borderRadius: BorderRadius.circular(radius ?? BioSenseRadius.md),
+      child: Padding(
+        padding: padding ?? const EdgeInsets.all(BioSenseSpacing.lg),
+        child: child,
       ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(radius ?? BioSenseRadius.lg),
-        child: Padding(
-          padding: padding ?? const EdgeInsets.all(BioSenseSpacing.lg),
-          child: child,
-        ),
+    );
+
+    if (animate) {
+      return AnimatedContainer(
+        duration: BioSenseMotion.slow,
+        curve: BioSenseMotion.flow,
+        decoration: decoration,
+        child: inner,
+      );
+    }
+    return Container(decoration: decoration, child: inner);
+  }
+
+  // ── Firma institucional (pie de cada pantalla)
+  static Widget institutionalFooter() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: BioSenseSpacing.lg),
+      child: Text(
+        'BioSense v1.0  |  ALTEA-GARAY HTS  |  USPTO #63/914,860',
+        textAlign: TextAlign.center,
+        style: BioSenseText.institutional,
       ),
     );
   }
 
-  // ── Estado de carga ────────────────────────────────────────
-  static Widget shimmer({double width = double.infinity, double height = 60}) {
-    return TweenAnimationBuilder<double>(
-      tween: Tween(begin: 0.4, end: 0.9),
-      duration: BioSenseMotion.slowest,
-      curve: BioSenseMotion.flow,
-      builder: (_, v, __) => Container(
-        width: width, height: height,
-        decoration: BoxDecoration(
-          color: BioSenseColor.border.withOpacity(v),
-          borderRadius: BorderRadius.circular(BioSenseRadius.md)),
+  // ── Sparkline widget para visualización en tiempo real
+  static Widget sparkline({
+    required List<double> data,
+    required Color color,
+    double height = 32,
+  }) {
+    if (data.length < 2) return SizedBox(height: height);
+    return CustomPaint(
+      size: Size(double.infinity, height),
+      painter: _SparklinePainter(data: data, color: color),
+    );
+  }
+
+  // ── Anillo de estabilidad gradual
+  static Widget stabilityRing({
+    required double value, // 0.0 - 1.0
+    required String statusKey,
+    double size = 48,
+  }) {
+    final color = BioSenseColor.forStatus(statusKey);
+    return SizedBox(
+      width: size, height: size,
+      child: CustomPaint(
+        painter: _StabilityRingPainter(value: value, color: color),
       ),
     );
   }
+}
+
+// ── Painter para sparklines en tiempo real
+class _SparklinePainter extends CustomPainter {
+  final List<double> data;
+  final Color color;
+  _SparklinePainter({required this.data, required this.color});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (data.length < 2) return;
+    final min = data.reduce((a, b) => a < b ? a : b);
+    final max = data.reduce((a, b) => a > b ? a : b);
+    final range = (max - min).abs() < 0.001 ? 1.0 : max - min;
+
+    final paint = Paint()
+      ..color = color
+      ..strokeWidth = 1.5
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round
+      ..strokeJoin = StrokeJoin.round;
+
+    final fillPaint = Paint()
+      ..color = color.withOpacity(0.08)
+      ..style = PaintingStyle.fill;
+
+    final path = Path();
+    final fillPath = Path();
+
+    for (int i = 0; i < data.length; i++) {
+      final x = (i / (data.length - 1)) * size.width;
+      final y = size.height - ((data[i] - min) / range) * size.height * 0.85
+                - size.height * 0.075;
+      if (i == 0) {
+        path.moveTo(x, y);
+        fillPath.moveTo(x, size.height);
+        fillPath.lineTo(x, y);
+      } else {
+        path.lineTo(x, y);
+        fillPath.lineTo(x, y);
+      }
+    }
+
+    fillPath.lineTo(size.width, size.height);
+    fillPath.close();
+
+    canvas.drawPath(fillPath, fillPaint);
+    canvas.drawPath(path, paint);
+  }
+
+  @override
+  bool shouldRepaint(_SparklinePainter old) => old.data != data;
+}
+
+// ── Painter para anillos de estabilidad
+class _StabilityRingPainter extends CustomPainter {
+  final double value;
+  final Color color;
+  _StabilityRingPainter({required this.value, required this.color});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final center = Offset(size.width / 2, size.height / 2);
+    final radius = (size.width / 2) - 3;
+
+    // Track
+    canvas.drawCircle(center, radius, Paint()
+      ..color = color.withOpacity(0.12)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 3);
+
+    // Arc
+    canvas.drawArc(
+      Rect.fromCircle(center: center, radius: radius),
+      -1.5708, // -π/2 (top)
+      value * 6.2832,
+      false,
+      Paint()
+        ..color = color
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 3
+        ..strokeCap = StrokeCap.round,
+    );
+  }
+
+  @override
+  bool shouldRepaint(_StabilityRingPainter old) =>
+      old.value != value || old.color != color;
 }
