@@ -1,12 +1,12 @@
 // ============================================================
-// BIOSENSE — Main Navigation
-// 🏠 Inicio | ❤️ Mi Salud | 📊 Historial | 👨‍⚕️ Médico
-// 👨‍👩‍👧‍👦 Familia | 💡 Consejos | ⚙️ Configuración
+// BIOSENSE OS — Main Navigation v2.0
+// Iconografía lineal — Sin emojis — Estilo clínico profesional
 // ============================================================
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/app_state_provider.dart';
+import '../design/biosense_theme.dart';
 import 'home_screen.dart';
 import 'my_health_screen.dart';
 import 'history_screen.dart';
@@ -24,59 +24,60 @@ class MainNavigationScreen extends StatefulWidget {
 class _MainNavigationScreenState extends State<MainNavigationScreen> {
   int _index = 0;
 
+  static const _screens = [
+    HomeScreen(),
+    MyHealthScreen(),
+    HistoryScreen(),
+    ClinicalSummaryScreen(),
+    FamilyGuardianScreen(),
+    TipsScreen(),
+    SettingsScreen(),
+  ];
+
   @override
   Widget build(BuildContext context) {
     final isEs = context.watch<AppStateProvider>().language.name == 'es';
 
-    final screens = [
-      const HomeScreen(),
-      const MyHealthScreen(),
-      const HistoryScreen(),
-      const ClinicalSummaryScreen(),
-      const FamilyGuardianScreen(),
-      const TipsScreen(),
-      const SettingsScreen(),
-    ];
-
     return Scaffold(
-      body: IndexedStack(index: _index, children: screens),
-      bottomNavigationBar: NavigationBarTheme(
-        data: NavigationBarThemeData(
-          labelTextStyle: WidgetStateProperty.all(
-            const TextStyle(fontSize: 10, fontWeight: FontWeight.w600)),
-        ),
+      body: IndexedStack(index: _index, children: _screens),
+      bottomNavigationBar: Container(
+        decoration: BoxDecoration(
+          color: BioSenseColor.surface,
+          border: Border(top: BorderSide(
+            color: BioSenseColor.border, width: 1))),
         child: NavigationBar(
           selectedIndex: _index,
           onDestinationSelected: (i) => setState(() => _index = i),
-          backgroundColor: Colors.white,
-          indicatorColor: const Color(0xFF1F4E79).withOpacity(0.12),
-          height: 64,
+          backgroundColor: BioSenseColor.surface,
+          indicatorColor: BioSenseColor.primary.withOpacity(0.10),
+          height: 62,
           labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
           destinations: [
-            NavigationDestination(
-              icon: const Text('🏠', style: TextStyle(fontSize: 20)),
-              label: isEs ? 'Inicio' : 'Home'),
-            NavigationDestination(
-              icon: const Text('❤️', style: TextStyle(fontSize: 20)),
-              label: isEs ? 'Mi Salud' : 'My Health'),
-            NavigationDestination(
-              icon: const Text('📊', style: TextStyle(fontSize: 20)),
-              label: isEs ? 'Historial' : 'History'),
-            NavigationDestination(
-              icon: const Text('👨‍⚕️', style: TextStyle(fontSize: 20)),
-              label: isEs ? 'Médico' : 'Doctor'),
-            NavigationDestination(
-              icon: const Text('👨‍👩‍👧‍👦', style: TextStyle(fontSize: 18)),
-              label: isEs ? 'Familia' : 'Family'),
-            NavigationDestination(
-              icon: const Text('💡', style: TextStyle(fontSize: 20)),
-              label: isEs ? 'Consejos' : 'Tips'),
-            NavigationDestination(
-              icon: const Icon(Icons.settings_outlined, size: 20),
-              label: isEs ? 'Ajustes' : 'Settings'),
+            _dest(Icons.monitor_heart_outlined,
+              isEs ? 'Inicio' : 'Home'),
+            _dest(Icons.biotech_outlined,
+              isEs ? 'Mi Salud' : 'Health'),
+            _dest(Icons.timeline_outlined,
+              isEs ? 'Historial' : 'History'),
+            _dest(Icons.medical_services_outlined,
+              isEs ? 'Médico' : 'Clinical'),
+            _dest(Icons.people_outline,
+              isEs ? 'Red' : 'Network'),
+            _dest(Icons.recommend_outlined,
+              isEs ? 'Consejos' : 'Tips'),
+            _dest(Icons.tune_outlined,
+              isEs ? 'Config.' : 'Config.'),
           ],
         ),
       ),
+    );
+  }
+
+  NavigationDestination _dest(IconData icon, String label) {
+    return NavigationDestination(
+      icon: Icon(icon, size: 22),
+      selectedIcon: Icon(icon, size: 22, color: BioSenseColor.primary),
+      label: label,
     );
   }
 }
