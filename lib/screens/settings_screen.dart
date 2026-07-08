@@ -1,5 +1,6 @@
 // ============================================================
-// BIOSENSE — Settings Screen (⚙️ Configuración)
+// BIOSENSE OS — Settings Screen v2.0
+// Configuración del Sistema — Sin emojis decorativos
 // ============================================================
 
 import 'package:flutter/material.dart';
@@ -8,6 +9,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../providers/app_state_provider.dart';
 import '../core/localization_manager.dart';
 import '../models/user_profile.dart';
+import '../design/biosense_theme.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -39,9 +41,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
     await prefs.setBool('mock_mode', _mockMode);
     if (mounted) {
       context.read<AppStateProvider>().setUserName(_nameCtrl.text.trim());
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('✅ Guardado'),
-          duration: Duration(seconds: 2)));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(
+          context.read<AppStateProvider>().language.name == 'es'
+            ? 'Configuración guardada correctamente'
+            : 'Settings saved successfully'),
+        backgroundColor: BioSenseColor.primary,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(BioSenseRadius.sm))));
     }
   }
 
@@ -51,203 +59,266 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final isEs = app.language.name == 'es';
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
+      backgroundColor: BioSenseColor.bgPrimary,
       appBar: AppBar(
-        title: Text(isEs ? 'Configuración' : 'Settings'),
+        title: Text(isEs ? 'Configuración del Sistema' : 'System Configuration'),
         actions: [
-          TextButton(onPressed: _save,
+          TextButton(
+            onPressed: _save,
             child: Text(isEs ? 'Guardar' : 'Save',
-              style: const TextStyle(color: Color(0xFF2E75B6),
-                fontWeight: FontWeight.bold, fontSize: 16))),
+              style: TextStyle(
+                color: BioSenseColor.primary,
+                fontWeight: FontWeight.w700))),
         ],
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        padding: const EdgeInsets.all(BioSenseSpacing.xl),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
 
-          // Nombre
-          _sectionTitle(isEs ? '¿Cómo te llamas?' : 'What is your name?'),
-          const SizedBox(height: 8),
-          TextField(
-            controller: _nameCtrl,
-            decoration: InputDecoration(
-              hintText: isEs ? 'Tu nombre' : 'Your name',
-              filled: true, fillColor: Colors.white,
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12),
-                borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
-              focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12),
-                borderSide: const BorderSide(color: Color(0xFF2E75B6), width: 2))),
-          ),
-          const SizedBox(height: 24),
+            // ── IDENTIFICACIÓN DEL PACIENTE
+            _SectionHeader(
+              isEs ? 'IDENTIFICACIÓN DEL PACIENTE' : 'PATIENT IDENTIFICATION'),
+            BioSenseTheme.clinicalCard(
+              animate: false,
+              padding: const EdgeInsets.all(BioSenseSpacing.lg),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                Text(isEs ? 'Nombre del paciente' : 'Patient name',
+                  style: BioSenseText.caption.copyWith(
+                    color: BioSenseColor.primary, fontWeight: FontWeight.w700)),
+                const SizedBox(height: BioSenseSpacing.sm),
+                TextField(
+                  controller: _nameCtrl,
+                  style: BioSenseText.body,
+                  decoration: InputDecoration(
+                    hintText: isEs
+                      ? 'Ingrese su nombre'
+                      : 'Enter your name',
+                    hintStyle: BioSenseText.body.copyWith(
+                      color: BioSenseColor.textHint),
+                    prefixIcon: const Icon(Icons.person_outline,
+                      color: BioSenseColor.primary, size: 20))),
+              ]),
+            ),
+            const SizedBox(height: BioSenseSpacing.xxl),
 
-          // Idioma
-          _sectionTitle(isEs ? 'Idioma / Language' : 'Language / Idioma'),
-          const SizedBox(height: 8),
-          _langToggle(app, isEs),
-          const SizedBox(height: 24),
+            // ── IDIOMA DEL SISTEMA
+            _SectionHeader(
+              isEs ? 'IDIOMA DEL SISTEMA' : 'SYSTEM LANGUAGE'),
+            Row(children: [
+              Expanded(child: GestureDetector(
+                onTap: () => app.toggleLanguage(AppLanguage.es),
+                child: AnimatedContainer(
+                  duration: BioSenseMotion.normal,
+                  curve: BioSenseMotion.flow,
+                  padding: const EdgeInsets.all(BioSenseSpacing.lg),
+                  decoration: BoxDecoration(
+                    color: isEs
+                      ? BioSenseColor.primary
+                      : BioSenseColor.surface,
+                    borderRadius: const BorderRadius.horizontal(
+                      left: Radius.circular(BioSenseRadius.md)),
+                    border: Border.all(color: BioSenseColor.border)),
+                  child: Column(children: [
+                    Text('ES', style: TextStyle(
+                      fontSize: 18, fontWeight: FontWeight.w700,
+                      color: isEs ? Colors.white : BioSenseColor.textMuted)),
+                    Text('Español', style: TextStyle(
+                      fontSize: 11,
+                      color: isEs ? Colors.white70 : BioSenseColor.textMuted)),
+                  ]),
+                ),
+              )),
+              Expanded(child: GestureDetector(
+                onTap: () => app.toggleLanguage(AppLanguage.en),
+                child: AnimatedContainer(
+                  duration: BioSenseMotion.normal,
+                  curve: BioSenseMotion.flow,
+                  padding: const EdgeInsets.all(BioSenseSpacing.lg),
+                  decoration: BoxDecoration(
+                    color: !isEs
+                      ? BioSenseColor.primary
+                      : BioSenseColor.surface,
+                    borderRadius: const BorderRadius.horizontal(
+                      right: Radius.circular(BioSenseRadius.md)),
+                    border: Border.all(color: BioSenseColor.border)),
+                  child: Column(children: [
+                    Text('EN', style: TextStyle(
+                      fontSize: 18, fontWeight: FontWeight.w700,
+                      color: !isEs ? Colors.white : BioSenseColor.textMuted)),
+                    Text('English', style: TextStyle(
+                      fontSize: 11,
+                      color: !isEs ? Colors.white70 : BioSenseColor.textMuted)),
+                  ]),
+                ),
+              )),
+            ]),
+            const SizedBox(height: BioSenseSpacing.xxl),
 
-          // Voz
-          _sectionTitle(isEs ? 'Voz de Altea' : 'Altea Voice'),
-          const SizedBox(height: 8),
-          _card(child: SwitchListTile(
-            value: app.voiceEnabled,
-            onChanged: (v) => app.setVoiceEnabled(v),
-            title: Text(isEs ? 'Activar avisos por voz' : 'Enable voice alerts',
-              style: const TextStyle(fontWeight: FontWeight.w600)),
-            subtitle: Text(isEs
-              ? 'Altea te habla cuando algo cambia'
-              : 'Altea speaks when something changes',
-              style: const TextStyle(fontSize: 12)),
-            activeColor: const Color(0xFF2E75B6),
-          )),
-          const SizedBox(height: 24),
+            // ── ALERTAS DE VOZ
+            _SectionHeader(
+              isEs ? 'ALERTAS DE VOZ — ALTEA' : 'VOICE ALERTS — ALTEA'),
+            BioSenseTheme.clinicalCard(
+              animate: false,
+              child: SwitchListTile(
+                value: app.voiceEnabled,
+                onChanged: (v) => app.setVoiceEnabled(v),
+                activeColor: BioSenseColor.primary,
+                title: Text(
+                  isEs ? 'Activar alertas por voz' : 'Enable voice alerts',
+                  style: BioSenseText.subtitle),
+                subtitle: Text(
+                  isEs
+                    ? 'El sistema ALTEA emite avisos auditivos al detectar cambios de estado'
+                    : 'The ALTEA system emits audio alerts when detecting status changes',
+                  style: BioSenseText.caption),
+                secondary: const Icon(Icons.record_voice_over_outlined,
+                  color: BioSenseColor.primary),
+              ),
+            ),
+            const SizedBox(height: BioSenseSpacing.xxl),
 
-          // Perfil
-          _sectionTitle(isEs ? '¿Quién eres?' : 'Who are you?'),
-          const SizedBox(height: 10),
-          _profileGrid(app, isEs),
-          const SizedBox(height: 24),
-
-          // Conexión
-          _sectionTitle(isEs ? 'Pulsera BioSense' : 'BioSense Band'),
-          const SizedBox(height: 8),
-          _card(child: SwitchListTile(
-            value: _mockMode,
-            onChanged: (v) {
-              setState(() => _mockMode = v);
-              if (v) {
-                app.connectMockMode();
-              } else {
-                app.connectHardware();
-              }
-            },
-            title: Text(isEs ? 'Modo simulación' : 'Simulation mode',
-              style: const TextStyle(fontWeight: FontWeight.w600)),
-            subtitle: Text(_mockMode
-              ? (isEs ? 'Sin pulsera física — modo demostración'
-                      : 'No physical band — demo mode')
-              : (isEs ? 'Buscando pulsera BioSense por Bluetooth...'
-                      : 'Searching for BioSense band via Bluetooth...'),
-              style: const TextStyle(fontSize: 12)),
-            activeColor: const Color(0xFF2E75B6),
-          )),
-          const SizedBox(height: 24),
-
-          // Disclaimer
-          Container(
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              color: const Color(0xFFFFF9E6), borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: const Color(0xFFF59E0B).withOpacity(0.4))),
-            child: Text(
+            // ── PERFIL FISIOLÓGICO
+            _SectionHeader(
+              isEs ? 'PERFIL FISIOLÓGICO' : 'PHYSIOLOGICAL PROFILE'),
+            Text(
               isEs
-                ? '⚠️ BioSense es un sistema de alerta predictiva. No diagnostica enfermedades. La interpretación clínica corresponde al médico.'
-                : '⚠️ BioSense is a predictive alert system. It does not diagnose diseases. Clinical interpretation belongs to the physician.',
-              style: const TextStyle(fontSize: 12, color: Color(0xFF92400E))),
-          ),
-          const SizedBox(height: 12),
-          Center(child: Text('BioSense v1.0 | ALTEA-GARAY HTS | USPTO #63/914,860',
-            style: const TextStyle(fontSize: 10, color: Color(0xFF94A3B8)))),
-          const SizedBox(height: 24),
-        ]),
+                ? 'El perfil calibra los umbrales del motor PHSE. El algoritmo central no cambia.'
+                : 'The profile calibrates PHSE engine thresholds. The core algorithm does not change.',
+              style: BioSenseText.caption),
+            const SizedBox(height: BioSenseSpacing.md),
+            GridView.count(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              crossAxisCount: 3,
+              childAspectRatio: 1.4,
+              crossAxisSpacing: BioSenseSpacing.sm,
+              mainAxisSpacing: BioSenseSpacing.sm,
+              children: _profiles(isEs).map((p) {
+                final sel = app.currentProfile == p.profile;
+                return GestureDetector(
+                  onTap: () => app.changeProfile(p.profile),
+                  child: AnimatedContainer(
+                    duration: BioSenseMotion.normal,
+                    decoration: BoxDecoration(
+                      color: sel
+                        ? BioSenseColor.primary
+                        : BioSenseColor.surface,
+                      borderRadius: BorderRadius.circular(BioSenseRadius.md),
+                      border: Border.all(
+                        color: sel
+                          ? BioSenseColor.primary
+                          : BioSenseColor.border,
+                        width: sel ? 1.5 : 1)),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                      Icon(p.icon,
+                        color: sel ? Colors.white : BioSenseColor.primary,
+                        size: 20),
+                      const SizedBox(height: 4),
+                      Text(p.label, style: TextStyle(
+                        fontSize: 11, fontWeight: FontWeight.w700,
+                        color: sel ? Colors.white : BioSenseColor.textPrimary),
+                        textAlign: TextAlign.center),
+                    ]),
+                  ),
+                );
+              }).toList(),
+            ),
+            const SizedBox(height: BioSenseSpacing.xxl),
+
+            // ── CONEXIÓN BLE
+            _SectionHeader(
+              isEs ? 'CONEXIÓN CON PULSERA BIOSENSE' : 'BIOSENSE BAND CONNECTION'),
+            BioSenseTheme.clinicalCard(
+              animate: false,
+              child: SwitchListTile(
+                value: _mockMode,
+                onChanged: (v) {
+                  setState(() => _mockMode = v);
+                  if (v) app.connectMockMode();
+                  else app.connectHardware();
+                },
+                activeColor: BioSenseColor.primary,
+                title: Text(
+                  isEs ? 'Modo demostración' : 'Demo mode',
+                  style: BioSenseText.subtitle),
+                subtitle: Text(
+                  _mockMode
+                    ? (isEs
+                        ? 'Sin pulsera física — modo demostración activo'
+                        : 'No physical band — demo mode active')
+                    : (isEs
+                        ? 'Buscando pulsera BioSense por Bluetooth...'
+                        : 'Searching for BioSense band via Bluetooth...'),
+                  style: BioSenseText.caption),
+                secondary: const Icon(Icons.bluetooth_outlined,
+                  color: BioSenseColor.primary),
+              ),
+            ),
+            const SizedBox(height: BioSenseSpacing.xxl),
+
+            // ── AVISO LEGAL
+            Container(
+              padding: const EdgeInsets.all(BioSenseSpacing.lg),
+              decoration: BoxDecoration(
+                color: BioSenseColor.surface,
+                borderRadius: BorderRadius.circular(BioSenseRadius.md),
+                border: Border.all(color: BioSenseColor.border)),
+              child: Text(
+                isEs
+                  ? 'BioSense es un sistema de alerta predictiva de grado clínico. No emite diagnósticos médicos. La interpretación clínica y el diagnóstico permanecen bajo la responsabilidad exclusiva del profesional de la salud habilitado.'
+                  : 'BioSense is a clinical-grade predictive alert system. It does not issue medical diagnoses. Clinical interpretation and diagnosis remain under the exclusive responsibility of the licensed healthcare professional.',
+                style: BioSenseText.caption.copyWith(height: 1.6)),
+            ),
+            const SizedBox(height: BioSenseSpacing.xxl),
+            BioSenseTheme.institutionalFooter(),
+          ],
+        ),
       ),
     );
   }
 
-  Widget _sectionTitle(String text) => Text(text,
-    style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold,
-      color: Color(0xFF1F4E79)));
-
-  Widget _card({required Widget child}) => Container(
-    decoration: BoxDecoration(color: Colors.white,
-      borderRadius: BorderRadius.circular(12),
-      border: Border.all(color: const Color(0xFFE2E8F0))),
-    child: child);
-
-  Widget _langToggle(AppStateProvider app, bool isEs) {
-    return Row(children: [
-      Expanded(child: GestureDetector(
-        onTap: () => app.toggleLanguage(AppLanguage.es),
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
-          padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(
-            color: isEs ? const Color(0xFF1F4E79) : Colors.white,
-            borderRadius: const BorderRadius.horizontal(left: Radius.circular(12)),
-            border: Border.all(color: const Color(0xFFE2E8F0))),
-          child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-            Text('🇲🇽', style: const TextStyle(fontSize: 20)),
-            const SizedBox(width: 8),
-            Text('Español', style: TextStyle(
-              fontWeight: FontWeight.bold,
-              color: isEs ? Colors.white : const Color(0xFF64748B))),
-          ]),
-        ),
-      )),
-      Expanded(child: GestureDetector(
-        onTap: () => app.toggleLanguage(AppLanguage.en),
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
-          padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(
-            color: !isEs ? const Color(0xFF1F4E79) : Colors.white,
-            borderRadius: const BorderRadius.horizontal(right: Radius.circular(12)),
-            border: Border.all(color: const Color(0xFFE2E8F0))),
-          child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-            Text('🇺🇸', style: const TextStyle(fontSize: 20)),
-            const SizedBox(width: 8),
-            Text('English', style: TextStyle(
-              fontWeight: FontWeight.bold,
-              color: !isEs ? Colors.white : const Color(0xFF64748B))),
-          ]),
-        ),
-      )),
-    ]);
-  }
-
-  Widget _profileGrid(AppStateProvider app, bool isEs) {
-    final options = [
-      _PO(UserProfile.nino,        '👶', isEs ? 'Niño'      : 'Child'),
-      _PO(UserProfile.adulto,      '🧑', isEs ? 'Adulto'    : 'Adult'),
-      _PO(UserProfile.adultoMayor, '👴', isEs ? 'Mayor'     : 'Senior'),
-      _PO(UserProfile.deportista,  '🏃', isEs ? 'Deportista': 'Athlete'),
-      _PO(UserProfile.cardiaco,    '🫀', isEs ? 'Corazón'   : 'Cardiac'),
-      _PO(UserProfile.diabetes,    '🩸', isEs ? 'Diabetes'  : 'Diabetes'),
-      _PO(UserProfile.hipertension,'💊', isEs ? 'Presión'   : 'Hypert.'),
-      _PO(UserProfile.embarazo,    '🤰', isEs ? 'Embarazo'  : 'Pregnancy'),
-      _PO(UserProfile.respiratorio,'🫁', isEs ? 'Respirat.' : 'Respirat.'),
-    ];
-    return GridView.count(
-      shrinkWrap: true, physics: const NeverScrollableScrollPhysics(),
-      crossAxisCount: 3, childAspectRatio: 1.1,
-      crossAxisSpacing: 8, mainAxisSpacing: 8,
-      children: options.map((o) {
-        final sel = app.currentProfile == o.profile;
-        return GestureDetector(
-          onTap: () => app.changeProfile(o.profile),
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 200),
-            decoration: BoxDecoration(
-              color: sel ? const Color(0xFF1F4E79).withOpacity(0.08) : Colors.white,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                color: sel ? const Color(0xFF1F4E79) : const Color(0xFFE2E8F0),
-                width: sel ? 2 : 1)),
-            child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-              Text(o.emoji, style: const TextStyle(fontSize: 26)),
-              const SizedBox(height: 4),
-              Text(o.label, style: TextStyle(fontSize: 11,
-                fontWeight: FontWeight.bold,
-                color: sel ? const Color(0xFF1F4E79) : const Color(0xFF374151))),
-            ]),
-          ),
-        );
-      }).toList(),
-    );
-  }
+  List<_ProfileOption> _profiles(bool isEs) => [
+    _ProfileOption(UserProfile.nino,        Icons.child_care_outlined,
+      isEs ? 'Infantil' : 'Pediatric'),
+    _ProfileOption(UserProfile.adulto,      Icons.person_outlined,
+      isEs ? 'Adulto' : 'Adult'),
+    _ProfileOption(UserProfile.adultoMayor, Icons.elderly_outlined,
+      isEs ? 'Mayor' : 'Senior'),
+    _ProfileOption(UserProfile.deportista,  Icons.fitness_center_outlined,
+      isEs ? 'Deportista' : 'Athletic'),
+    _ProfileOption(UserProfile.cardiaco,    Icons.favorite_border_outlined,
+      isEs ? 'Cardíaco' : 'Cardiac'),
+    _ProfileOption(UserProfile.diabetes,    Icons.water_drop_outlined,
+      isEs ? 'Diabetes' : 'Diabetes'),
+    _ProfileOption(UserProfile.hipertension,Icons.monitor_heart_outlined,
+      isEs ? 'Hipert.' : 'Hypert.'),
+    _ProfileOption(UserProfile.embarazo,    Icons.pregnant_woman_outlined,
+      isEs ? 'Embarazo' : 'Pregnancy'),
+    _ProfileOption(UserProfile.respiratorio,Icons.air_outlined,
+      isEs ? 'Resp.' : 'Respir.'),
+  ];
 }
 
-class _PO {
-  final UserProfile profile; final String emoji, label;
-  const _PO(this.profile, this.emoji, this.label);
+class _SectionHeader extends StatelessWidget {
+  final String text;
+  const _SectionHeader(this.text);
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.only(bottom: BioSenseSpacing.md),
+    child: Text(text, style: BioSenseText.label.copyWith(
+      color: BioSenseColor.primary)));
+}
+
+class _ProfileOption {
+  final UserProfile profile;
+  final IconData icon;
+  final String label;
+  const _ProfileOption(this.profile, this.icon, this.label);
 }
