@@ -22,8 +22,6 @@ class _FamilyGuardianScreenState extends State<FamilyGuardianScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabs;
   final GuardianManager _guardian = GuardianManager();
-  // ✅ Si no la usas por ahora, puedes comentarla o borrarla; si la usarás luego, la dejamos así
-  // GuardianToken? _currentToken;
   Timer? _countdownTimer;
   int _secondsLeft = 60;
 
@@ -36,8 +34,6 @@ class _FamilyGuardianScreenState extends State<FamilyGuardianScreen>
 
   void _generateToken() {
     setState(() {
-      // ✅ Si la vuelves a usar, descomenta:
-      // _currentToken = _guardian.generateTemporalToken();
       _secondsLeft  = 60;
     });
     _countdownTimer?.cancel();
@@ -105,7 +101,6 @@ class _FamilyGuardianScreenState extends State<FamilyGuardianScreen>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // Header descriptivo
           BioSenseTheme.clinicalCard(
             animate: false,
             padding: const EdgeInsets.all(BioSenseSpacing.lg),
@@ -139,7 +134,6 @@ class _FamilyGuardianScreenState extends State<FamilyGuardianScreen>
           ),
           const SizedBox(height: BioSenseSpacing.xl),
 
-          // QR Code
           Container(
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
@@ -165,7 +159,6 @@ class _FamilyGuardianScreenState extends State<FamilyGuardianScreen>
                   ),
                 ),
                 const SizedBox(height: 12),
-                // Contador de tiempo
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center, 
                   children: [
@@ -180,7 +173,6 @@ class _FamilyGuardianScreenState extends State<FamilyGuardianScreen>
                   ]
                 ),
                 const SizedBox(height: 4),
-                // Barra de progreso
                 ClipRRect(
                   borderRadius: BorderRadius.circular(BioSenseRadius.full),
                   child: LinearProgressIndicator(
@@ -195,7 +187,6 @@ class _FamilyGuardianScreenState extends State<FamilyGuardianScreen>
           ),
           const SizedBox(height: BioSenseSpacing.lg),
 
-          // Botón regenerar
           SizedBox(
             width: double.infinity,
             child: OutlinedButton.icon(
@@ -206,7 +197,6 @@ class _FamilyGuardianScreenState extends State<FamilyGuardianScreen>
           ),
           const SizedBox(height: BioSenseSpacing.xl),
 
-          // Caja de privacidad
           BioSenseTheme.clinicalCard(
             animate: false,
             color: BioSenseColor.stable.withOpacity(0.04),
@@ -303,7 +293,6 @@ class _FamilyGuardianScreenState extends State<FamilyGuardianScreen>
                   padding: const EdgeInsets.all(BioSenseSpacing.lg),
                   child: Row(
                     children: [
-                      // Indicador de estado
                       Container(
                         width: 10, 
                         height: 10,
