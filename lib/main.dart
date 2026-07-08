@@ -25,6 +25,7 @@ import 'services/ble_service.dart';
 import 'repositories/health_repository.dart';
 import 'providers/app_state_provider.dart';
 import 'screens/main_navigation_screen.dart';
+import 'design/biosense_theme.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -70,9 +71,7 @@ class BioSenseApp extends StatelessWidget {
           GlobalCupertinoLocalizations.delegate,
         ],
         supportedLocales: const [Locale('es'), Locale('en')],
-        theme: ThemeData(
-          colorScheme: ColorScheme.fromSeed(
-            seedColor: const Color(0xFF1F4E79),
+        theme: BioSenseTheme.theme,
             brightness: Brightness.light,
           ),
           useMaterial3: true,
