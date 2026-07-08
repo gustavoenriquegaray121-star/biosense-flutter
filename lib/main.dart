@@ -71,22 +71,27 @@ class BioSenseApp extends StatelessWidget {
           GlobalCupertinoLocalizations.delegate,
         ],
         supportedLocales: const [Locale('es'), Locale('en')],
-        theme: BioSenseTheme.theme,
-            brightness: Brightness.light,
-          ),
+        // ✅ Tema corregido: todo dentro de ThemeData
+        theme: ThemeData(
           useMaterial3: true,
+          brightness: Brightness.light,
           appBarTheme: const AppBarTheme(
             backgroundColor: Colors.white,
             elevation: 0,
             centerTitle: false,
             titleTextStyle: TextStyle(
-              color: Color(0xFF1F4E79), fontSize: 18, fontWeight: FontWeight.bold),
+              color: Color(0xFF1F4E79), 
+              fontSize: 18, 
+              fontWeight: FontWeight.bold
+            ),
           ),
           elevatedButtonTheme: ElevatedButtonThemeData(
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFF1F4E79),
               foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(14)
+              ),
             ),
           ),
         ),
@@ -120,7 +125,7 @@ class _SplashScreenState extends State<SplashScreen>
 
     Future.delayed(const Duration(milliseconds: 2200), () {
       if (mounted) {
-        // Arranca el motor en modo simulación por defecto
+        // ✅ Corregido: accedemos al provider correctamente
         Provider.of<AppStateProvider>(context, listen: false).connectMockMode();
         Navigator.of(context).pushReplacement(
           PageRouteBuilder(
@@ -135,7 +140,10 @@ class _SplashScreenState extends State<SplashScreen>
   }
 
   @override
-  void dispose() { _ctrl.dispose(); super.dispose(); }
+  void dispose() { 
+    _ctrl.dispose(); 
+    super.dispose(); 
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -146,38 +154,77 @@ class _SplashScreenState extends State<SplashScreen>
           opacity: _fade,
           child: ScaleTransition(
             scale: _scale,
-            child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-              Container(
-                width: 100, height: 100,
-                decoration: BoxDecoration(
-                  color: const Color(0xFF1F4E79),
-                  borderRadius: BorderRadius.circular(28),
-                  boxShadow: [BoxShadow(
-                    color: const Color(0xFF3B82F6).withOpacity(0.4),
-                    blurRadius: 30, spreadRadius: 4)],
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center, 
+              children: [
+                Container(
+                  width: 100, height: 100,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF1F4E79),
+                    borderRadius: BorderRadius.circular(28),
+                    boxShadow: [
+                      BoxShadow(
+                        color: const Color(0xFF3B82F6).withOpacity(0.4),
+                        blurRadius: 30, 
+                        spreadRadius: 4
+                      )
+                    ],
+                  ),
+                  child: const Center(child: Text('🫀', style: TextStyle(fontSize: 52))),
                 ),
-                child: const Center(child: Text('🫀', style: TextStyle(fontSize: 52))),
-              ),
-              const SizedBox(height: 24),
-              const Text('BioSense',
-                style: TextStyle(fontSize: 36, fontWeight: FontWeight.bold,
-                  color: Colors.white, letterSpacing: 1)),
-              const SizedBox(height: 8),
-              const Text('Tu cuerpo habla antes que los síntomas.',
-                style: TextStyle(fontSize: 14, color: Color(0xFF93C5FD),
-                  fontStyle: FontStyle.italic)),
-              const SizedBox(height: 48),
-              const SizedBox(width: 28, height: 28,
-                child: CircularProgressIndicator(strokeWidth: 2.5, color: Color(0xFF3B82F6))),
-              const SizedBox(height: 16),
-              const Text('Iniciando motor predictivo…',
-                style: TextStyle(fontSize: 12, color: Color(0xFF64748B))),
-              const SizedBox(height: 60),
-              const Text('Powered by Phoenix-UCC v7.3',
-                style: TextStyle(fontSize: 10, color: Color(0xFF334155), letterSpacing: 0.5)),
-              const Text('ALTEA-GARAY HTS | USPTO #63/914,860',
-                style: TextStyle(fontSize: 9, color: Color(0xFF1E293B))),
-            ]),
+                const SizedBox(height: 24),
+                const Text(
+                  'BioSense',
+                  style: TextStyle(
+                    fontSize: 36, 
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white, 
+                    letterSpacing: 1
+                  )
+                ),
+                const SizedBox(height: 8),
+                const Text(
+                  'Tu cuerpo habla antes que los síntomas.',
+                  style: TextStyle(
+                    fontSize: 14, 
+                    color: Color(0xFF93C5FD),
+                    fontStyle: FontStyle.italic
+                  )
+                ),
+                const SizedBox(height: 48),
+                const SizedBox(
+                  width: 28, height: 28,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2.5, 
+                    color: Color(0xFF3B82F6)
+                  )
+                ),
+                const SizedBox(height: 16),
+                const Text(
+                  'Iniciando motor predictivo…',
+                  style: TextStyle(
+                    fontSize: 12, 
+                    color: Color(0xFF64748B)
+                  )
+                ),
+                const SizedBox(height: 60),
+                const Text(
+                  'Powered by Phoenix-UCC v7.3',
+                  style: TextStyle(
+                    fontSize: 10, 
+                    color: Color(0xFF334155), 
+                    letterSpacing: 0.5
+                  )
+                ),
+                const Text(
+                  'ALTEA-GARAY HTS | USPTO #63/914,860',
+                  style: TextStyle(
+                    fontSize: 9, 
+                    color: Color(0xFF1E293B)
+                  )
+                ),
+              ]
+            ),
           ),
         ),
       ),
