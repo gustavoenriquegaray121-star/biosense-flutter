@@ -11,7 +11,6 @@ import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 import '../providers/app_state_provider.dart';
 import '../models/health_state.dart';
-import '../models/user_profile.dart';
 import '../design/biosense_theme.dart';
 
 class ClinicalSummaryScreen extends StatefulWidget {
@@ -114,7 +113,6 @@ class _ClinicalSummaryScreenState extends State<ClinicalSummaryScreen>
         case ChannelStatus.alto:     return 'Important change';
       }
     }
-    return '';
   }
 
   @override
@@ -143,7 +141,7 @@ class _ClinicalSummaryScreenState extends State<ClinicalSummaryScreen>
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
 
-              // HEADER
+              // ── HEADER
               Row(children: [
                 _SecBadge(label: 'SECURE AES-256', color: BioSenseColor.stable),
                 const SizedBox(width: 8),
@@ -168,7 +166,7 @@ class _ClinicalSummaryScreenState extends State<ClinicalSummaryScreen>
               Container(height: 1, color: divClr),
               const SizedBox(height: 12),
 
-              // AVISO
+              // ── AVISO
               Container(
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
@@ -184,7 +182,7 @@ class _ClinicalSummaryScreenState extends State<ClinicalSummaryScreen>
                     color: Color(0xFFF39C12), height: 1.4))),
               const SizedBox(height: 16),
 
-              // BODY: SEMÁFORO + TELEMETRÍA
+              // ── BODY: SEMÁFORO + TELEMETRÍA
               Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
 
                 // COLUMNA 1 — SEMÁFORO TÁCTICO
@@ -303,7 +301,7 @@ class _ClinicalSummaryScreenState extends State<ClinicalSummaryScreen>
               ]),
               const SizedBox(height: 12),
 
-              // VITALES
+              // ── VITALES
               Container(height: 1, color: divClr),
               const SizedBox(height: 12),
               Text(
@@ -335,7 +333,7 @@ class _ClinicalSummaryScreenState extends State<ClinicalSummaryScreen>
                 reading: state.gsr, isEs: isEs, cyan: cyan),
               const SizedBox(height: 12),
 
-              // PACIENTE
+              // ── PACIENTE
               _ConsoleCard(bgCard: const Color(0xFF20252B), child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -360,7 +358,7 @@ class _ClinicalSummaryScreenState extends State<ClinicalSummaryScreen>
                 ])),
               const SizedBox(height: 16),
 
-              // PDF
+              // ── PDF
               SizedBox(height: 52,
                 child: ElevatedButton.icon(
                   onPressed: () => _generatePdf(context, app, state, isEs),
@@ -392,8 +390,8 @@ class _ClinicalSummaryScreenState extends State<ClinicalSummaryScreen>
     final pdf = pw.Document();
     final now = DateTime.now();
     final dateStr = isEs
-      ? '\( {now.day}/ \){now.month}/${now.year}'
-      : '\( {now.month}/ \){now.day}/${now.year}';
+      ? '${now.day}/${now.month}/${now.year}'
+      : '${now.month}/${now.day}/${now.year}';
 
     pdf.addPage(pw.Page(
       pageFormat: PdfPageFormat.a4,
