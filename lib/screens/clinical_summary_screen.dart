@@ -1,6 +1,6 @@
 // ============================================================
 // BIOSENSE OS — Clinical Console v2.0
-// Modo Médico: Fondo oscuro #1B1F24 — Siemens / Philips style
+// Modo Médico: Fondo oscuro #1B1F24
 // ============================================================
 
 import 'dart:async';
@@ -25,7 +25,6 @@ class _ClinicalSummaryScreenState extends State<ClinicalSummaryScreen>
   late Timer _clockTimer;
   DateTime _now = DateTime.now();
 
-  // Animaciones del semáforo por estado
   late AnimationController _stableCtrl;
   late AnimationController _watchCtrl;
   late AnimationController _preventCtrl;
@@ -35,7 +34,9 @@ class _ClinicalSummaryScreenState extends State<ClinicalSummaryScreen>
   void initState() {
     super.initState();
     _clockTimer = Timer.periodic(
-      const Duration(seconds: 1), (_) => setState(() => _now = DateTime.now()));
+      const Duration(seconds: 1), (_) {
+        if (mounted) setState(() => _now = DateTime.now());
+      });
 
     _stableCtrl = AnimationController(vsync: this,
       duration: const Duration(milliseconds: 2800))..repeat(reverse: true);
@@ -57,302 +58,46 @@ class _ClinicalSummaryScreenState extends State<ClinicalSummaryScreen>
     super.dispose();
   }
 
-  // Opacidad mínima según estado
-  double _minOpacity(String key) {
-    switch(key) {
+  AnimationController _ctrlForStatus(String key) {
+    switch (key) {
+      case 'fatigue': return _watchCtrl;
+      case 'alert':   return _preventCtrl;
+      case 'danger':
+      case 'critical':return _critCtrl;
+      default:        return _stableCtrl;
+    }
+  }
+
+  double _minOpacityFor(String key) {
+    switch (key) {
       case 'fatigue':  return 0.75;
       case 'alert':    return 0.60;
-      case 'danger':   return 0.35;
+      case 'danger':
+      case 'critical': return 0.35;
       default:         return 0.88;
     }
   }
 
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final app   = context.watch<AppStateProvider>();
-    final state = app.healthState;
-    final isEs  = app.language.name == 'es';
-    final statusKey = state.statusKey;
-
-    const bg       = Color(0xFF1B1F24);
-    const bgCard   = Color(0xFF20252B);
-    const cyan     = Color(0xFF4FC3F7);
-    const divClr   = Color(0xFF2C3340);
-
-    final timeStr =
-      '${_now.hour.toString().padLeft(2,'0')}:'
-      '${_now.minute.toString().padLeft(2,'0')}:'
-      '${_now.second.toString().padLeft(2,'0')}';
-
-    return Scaffold(
-      backgroundColor: bg,
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-
-              // ── HEADER CLINICAL CONSOLE
-              Row(children: [
-                // Badges de seguridad
-                _SecBadge(label: 'SECURE AES-256', color: BioSenseColor.stable),
-                const SizedBox(width: 8),
-                _SecBadge(label: 'VERIFIED', color: cyan),
-                const Spacer(),
-                Text(timeStr, style: const TextStyle(
-                  fontSize: 14, fontWeight: FontWeight.w200,
-                  letterSpacing: 1.5, color: Colors.white70,
-                  fontFeatures: [FontFeature.tabularFigures()])),
-              ]),
-              const SizedBox(height: 12),
-              const Text('BioSense Clinical Console',
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700,
-                  color: Colors.white, letterSpacing: 0.3)),
-              const Text('PHSE Predictive Engine  ·  ALTEA-GARAY HTS',
-                style: TextStyle(fontSize: 11, color: Colors.white38,
-                  letterSpacing: 0.8)),
-              const SizedBox(height: 4),
-              Container(height: 1, color: divClr),
-              const SizedBox(height: 16),
-
-              // AVISO
-              Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  border: Border.all(color: BioSenseColor.warning.withOpacity(0.4)),
-                  borderRadius: BorderRadius.circular(BioSenseRadius.sm),
-                  color: BioSenseColor.warning.withOpacity(0.06)),
-                child: Text(
-                  isEs
-                    ? 'Información de apoyo clínico. BioSense no emite diagnósticos. La interpretación corresponde al profesional de la salud.'
-                    : 'Clinical support information. BioSense does not diagnose. Interpretation belongs to the healthcare professional.',
-                  style: const TextStyle(fontSize: 11, color: Color(0xFFF39C12),
-                    height: 1.4)),
-              ),
-              const SizedBox(height: 16),
-
-              // ── BODY: SEMÁFORO + TELEMETRÍA
-              Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-
-                // COLUMNA 1 — SEMÁFORO TÁCTICO
-                SizedBox(width: 88, child: Column(children: [
-                  const Text('STATUS', style: TextStyle(
-                    fontSize: 9, fontWeight: FontWeight.w800,
-                    color: Colors.white38, letterSpacing: 1.5)),
-                  const SizedBox(height: 12),
-                  _TacticalLevel(
-                    label: 'NORMAL',
-                    color: BioSenseColor.stable,
-                    active: statusKey == 'stable',
-                    ctrl: _stableCtrl,
-                    minOpacity: _minOpacity('stable')),
-                  const SizedBox(height: 8),
-                  _TacticalLevel(
-                    label: 'WATCH',
-                    color: BioSenseColor.warning,
-                    active: statusKey == 'fatigue',
-                    ctrl: _watchCtrl,
-                    minOpacity: _minOpacity('fatigue')),
-                  const SizedBox(height: 8),
-                  _TacticalLevel(
-                    label: 'PREVENT',
-                    color: const Color(0xFFE67E22),
-                    active: statusKey == 'alert',
-                    ctrl: _preventCtrl,
-                    minOpacity: _minOpacity('alert')),
-                  const SizedBox(height: 8),
-                  _TacticalLevel(
-                    label: 'CRITICAL',
-                    color: BioSenseColor.alert,
-                    active: statusKey == 'danger' || statusKey == 'critical',
-                    ctrl: _critCtrl,
-                    minOpacity: _minOpacity('danger')),
-                ])),
-
-                const SizedBox(width: 12),
-
-                // COLUMNA 2 — TELEMETRÍA PHSE
-                Expanded(child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                  _ConsoleCard(bgCard: bgCard, child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text('PHSE CORE ENGINE TELEMETRY',
-                        style: TextStyle(fontSize: 9, fontWeight: FontWeight.w800,
-                          color: Colors.white38, letterSpacing: 1.2)),
-                      const SizedBox(height: 10),
-                      _TelRow('Model Sync', '100.0%', cyan),
-                      _TelRow('Prediction Horizon', '90 ns', cyan),
-                      _TelRow('Algorithm Confidence',
-                        '${(state.confidenceLevel*100).toStringAsFixed(2)}%', cyan),
-                      _TelRow('Samples Processed',
-                        '${state.cycle + 1248}', cyan),
-                      _TelRow('Homeostatic Stability',
-                        statusKey == 'stable' ? 'NORMAL' : statusKey.toUpperCase(),
-                        BioSenseColor.forStatus(statusKey)),
-                    ],
-                  )),
-                  const SizedBox(height: 8),
-
-                  // LÍNEA TEMPORAL
-                  _ConsoleCard(bgCard: bgCard, child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text('PHSE TRAJECTORY ANALYSIS',
-                        style: TextStyle(fontSize: 9, fontWeight: FontWeight.w800,
-                          color: Colors.white38, letterSpacing: 1.2)),
-                      const SizedBox(height: 10),
-                      Row(children: [
-                        _TlNode('PAST', Icons.check_circle_outline,
-                          BioSenseColor.stable),
-                        Expanded(child: Container(height: 1,
-                          color: Colors.white12)),
-                        _TlNode('NOW', Icons.radio_button_checked,
-                          cyan),
-                        Expanded(child: _DashedLine()),
-                        _TlNode('FUTURE', Icons.circle_outlined,
-                          Colors.white24),
-                      ]),
-                      const SizedBox(height: 8),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                        _TrajStat(
-                          label: 'Velocity',
-                          value: state.velocity < -0.002 ? 'High' : 'Low',
-                          color: state.velocity < -0.002
-                            ? BioSenseColor.warning : BioSenseColor.stable),
-                        _TrajStat(
-                          label: 'Jerk',
-                          value: state.jerk < 0 ? 'Rising' : 'Stable',
-                          color: state.jerk < 0
-                            ? BioSenseColor.warning : BioSenseColor.stable),
-                        _TrajStat(
-                          label: 'Horizon',
-                          value: state.jerk.abs() > 0.008 ? '96 s' : '24 s',
-                          color: cyan),
-                      ]),
-                    ],
-                  )),
-                ])),
-              ]),
-              const SizedBox(height: 12),
-
-              // ── VITALS CLINICAL SUMMARY
-              Container(height: 1, color: divClr),
-              const SizedBox(height: 12),
-              const Text('CRITICAL VITALS CLINICAL SUMMARY',
-                style: TextStyle(fontSize: 9, fontWeight: FontWeight.w800,
-                  color: Colors.white38, letterSpacing: 1.2)),
-              const SizedBox(height: 10),
-
-              _VitalRow(
-                label: 'CARDIOVASCULAR (HRV/FC)',
-                value: '72 bpm',
-                delta: '+0.2%',
-                reading: state.hrv,
-                isEs: isEs,
-                cyan: cyan,
-              ),
-              const SizedBox(height: 8),
-              _VitalRow(
-                label: 'RESPIRATORY RATE',
-                value: '16 rpm',
-                delta: '0.04 CV',
-                reading: state.resp,
-                isEs: isEs,
-                cyan: cyan,
-              ),
-              const SizedBox(height: 8),
-              _VitalRow(
-                label: 'BASELINE TEMPERATURE',
-                value: '36.6°C',
-                delta: '+0.1°C',
-                reading: state.temp,
-                isEs: isEs,
-                cyan: cyan,
-              ),
-              const SizedBox(height: 8),
-              _VitalRow(
-                label: 'GALVANIC SKIN RESPONSE',
-                value: '1.2 µS',
-                delta: '±0.3',
-                reading: state.gsr,
-                isEs: isEs,
-                cyan: cyan,
-              ),
-              const SizedBox(height: 16),
-
-              // ── PACIENTE
-              _ConsoleCard(bgCard: bgCard, child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text('PATIENT RECORD',
-                    style: TextStyle(fontSize: 9, fontWeight: FontWeight.w800,
-                      color: Colors.white38, letterSpacing: 1.2)),
-                  const SizedBox(height: 8),
-                  _TelRow('Patient', app.userName, Colors.white70),
-                  _TelRow('Profile', _profileName(app.currentProfile, isEs),
-                    Colors.white70),
-                  _TelRow('Session cycles',
-                    '${state.cycle + 1248}', cyan),
-                  _TelRow('Baseline locked',
-                    app.baselineLocked ? 'YES' : 'LEARNING',
-                    app.baselineLocked ? BioSenseColor.stable : BioSenseColor.warning),
-                ],
-              )),
-              const SizedBox(height: 16),
-
-              // ── BOTÓN PDF
-              SizedBox(height: 52,
-                child: ElevatedButton.icon(
-                  onPressed: () => _generatePdf(context, app, state, isEs),
-                  icon: const Icon(Icons.picture_as_pdf_outlined, size: 20),
-                  label: Text(
-                    isEs ? 'Generar Reporte PDF' : 'Generate PDF Report',
-                    style: BioSenseText.subtitle.copyWith(color: Colors.white)),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: BioSenseColor.primary,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(BioSenseRadius.sm))),
-                ),
-              ),
-              const SizedBox(height: 16),
-
-              // FOOTER
-              const Center(child: Text(
-                'BioSense v1.0  |  ALTEA-GARAY HTS  |  USPTO #63/914,860',
-                style: TextStyle(fontSize: 9, color: Color(0xFF566573),
-                  letterSpacing: 0.5))),
-              const SizedBox(height: 8),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  String _profileName(dynamic profile, bool isEs) {
-    final names = {
-      'nino':        isEs ? 'Infantil' : 'Pediatric',
-      'adolescente': isEs ? 'Adolescente' : 'Adolescent',
-      'adulto':      isEs ? 'Adulto' : 'Adult',
-      'embarazo':    isEs ? 'Embarazo' : 'Pregnancy',
-      'adultoMayor': isEs ? 'Adulto Mayor' : 'Senior',
-      'deportista':  isEs ? 'Deportista' : 'Athletic',
-      'cardiaco':    isEs ? 'Cardíaco' : 'Cardiac',
-      'diabetes':    isEs ? 'Diabetes' : 'Diabetes',
-      'hipertension':isEs ? 'Hipertensión' : 'Hypertension',
-      'respiratorio':isEs ? 'Respiratorio' : 'Respiratory',
+  String _profileName(UserProfile profile, bool isEs) {
+    const esNames = {
+      'nino': 'Infantil', 'adolescente': 'Adolescente',
+      'adulto': 'Adulto', 'embarazo': 'Embarazo',
+      'adultoMayor': 'Adulto Mayor', 'deportista': 'Deportista',
+      'cardiaco': 'Cardíaco', 'diabetes': 'Diabetes',
+      'hipertension': 'Hipertensión', 'respiratorio': 'Respiratorio',
     };
-    return names[profile.name] ?? profile.name.toUpperCase();
+    const enNames = {
+      'nino': 'Pediatric', 'adolescente': 'Adolescent',
+      'adulto': 'Adult', 'embarazo': 'Pregnancy',
+      'adultoMayor': 'Senior', 'deportista': 'Athletic',
+      'cardiaco': 'Cardiac', 'diabetes': 'Diabetes',
+      'hipertension': 'Hypertension', 'respiratorio': 'Respiratory',
+    };
+    final map = isEs ? esNames : enNames;
+    return map[profile.name] ?? profile.name.toUpperCase();
   }
 
-    String _statusText(ChannelStatus s, bool isEs) {
+  String _statusText(ChannelStatus s, bool isEs) {
     if (isEs) {
       switch (s) {
         case ChannelStatus.normal:   return 'Normal';
@@ -368,6 +113,277 @@ class _ClinicalSummaryScreenState extends State<ClinicalSummaryScreen>
         case ChannelStatus.alto:     return 'Important change';
       }
     }
+    return '';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final app       = context.watch<AppStateProvider>();
+    final state     = app.healthState;
+    final isEs      = app.language.name == 'es';
+    final statusKey = state.statusKey;
+
+    const bg     = Color(0xFF1B1F24);
+    const bgCard = Color(0xFF20252B);
+    const cyan   = Color(0xFF4FC3F7);
+    const divClr = Color(0xFF2C3340);
+
+    final timeStr =
+      '${_now.hour.toString().padLeft(2,'0')}:'
+      '${_now.minute.toString().padLeft(2,'0')}:'
+      '${_now.second.toString().padLeft(2,'0')}';
+
+    return Scaffold(
+      backgroundColor: bg,
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+
+              // ── HEADER
+              Row(children: [
+                _SecBadge(label: 'SECURE AES-256', color: BioSenseColor.stable),
+                const SizedBox(width: 8),
+                _SecBadge(label: 'VERIFIED', color: cyan),
+                const Spacer(),
+                Text(timeStr, style: const TextStyle(
+                  fontSize: 14, fontWeight: FontWeight.w200,
+                  letterSpacing: 1.5, color: Colors.white70,
+                  fontFeatures: [FontFeature.tabularFigures()])),
+              ]),
+              const SizedBox(height: 12),
+              const Text('BioSense Clinical Console', style: TextStyle(
+                fontSize: 20, fontWeight: FontWeight.w700, color: Colors.white,
+                letterSpacing: 0.3)),
+              Text(
+                isEs
+                  ? 'Motor Predictivo PHSE  ·  ALTEA-GARAY HTS'
+                  : 'PHSE Predictive Engine  ·  ALTEA-GARAY HTS',
+                style: const TextStyle(fontSize: 11, color: Colors.white38,
+                  letterSpacing: 0.8)),
+              const SizedBox(height: 8),
+              Container(height: 1, color: divClr),
+              const SizedBox(height: 12),
+
+              // ── AVISO
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  border: Border.all(
+                    color: BioSenseColor.warning.withOpacity(0.4)),
+                  borderRadius: BorderRadius.circular(6),
+                  color: BioSenseColor.warning.withOpacity(0.06)),
+                child: Text(
+                  isEs
+                    ? 'Información de apoyo clínico. BioSense no emite diagnósticos. La interpretación corresponde al profesional de la salud.'
+                    : 'Clinical support information. BioSense does not diagnose. Interpretation belongs to the healthcare professional.',
+                  style: const TextStyle(fontSize: 11,
+                    color: Color(0xFFF39C12), height: 1.4))),
+              const SizedBox(height: 16),
+
+              // ── BODY: SEMÁFORO + TELEMETRÍA
+              Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+
+                // COLUMNA 1 — SEMÁFORO TÁCTICO
+                SizedBox(width: 84, child: Column(children: [
+                  Text(isEs ? 'ESTADO' : 'STATUS',
+                    style: const TextStyle(fontSize: 9,
+                      fontWeight: FontWeight.w800, color: Colors.white38,
+                      letterSpacing: 1.5)),
+                  const SizedBox(height: 12),
+                  _TacticalLevel(
+                    label: 'NORMAL', color: BioSenseColor.stable,
+                    active: statusKey == 'stable',
+                    ctrl: _ctrlForStatus('stable'),
+                    minOpacity: _minOpacityFor('stable')),
+                  const SizedBox(height: 8),
+                  _TacticalLevel(
+                    label: 'WATCH', color: BioSenseColor.warning,
+                    active: statusKey == 'fatigue',
+                    ctrl: _ctrlForStatus('fatigue'),
+                    minOpacity: _minOpacityFor('fatigue')),
+                  const SizedBox(height: 8),
+                  _TacticalLevel(
+                    label: 'PREVENT', color: const Color(0xFFE67E22),
+                    active: statusKey == 'alert',
+                    ctrl: _ctrlForStatus('alert'),
+                    minOpacity: _minOpacityFor('alert')),
+                  const SizedBox(height: 8),
+                  _TacticalLevel(
+                    label: 'CRITICAL', color: BioSenseColor.alert,
+                    active: statusKey == 'danger' || statusKey == 'critical',
+                    ctrl: _ctrlForStatus('danger'),
+                    minOpacity: _minOpacityFor('danger')),
+                ])),
+                const SizedBox(width: 12),
+
+                // COLUMNA 2 — TELEMETRÍA
+                Expanded(child: Column(children: [
+                  _ConsoleCard(bgCard: bgCard, child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        isEs
+                          ? 'TELEMETRÍA DEL MOTOR PHSE'
+                          : 'PHSE ENGINE TELEMETRY',
+                        style: const TextStyle(fontSize: 9,
+                          fontWeight: FontWeight.w800, color: Colors.white38,
+                          letterSpacing: 1.2)),
+                      const SizedBox(height: 10),
+                      _TelRow(isEs ? 'Sincronización' : 'Model Sync',
+                        '100.0%', cyan),
+                      _TelRow(isEs ? 'Horizonte predictivo' : 'Pred. Horizon',
+                        '90 ns', cyan),
+                      _TelRow(isEs ? 'Confianza' : 'Confidence',
+                        '${(state.confidenceLevel*100).toStringAsFixed(2)}%',
+                        cyan),
+                      _TelRow(isEs ? 'Muestras' : 'Samples',
+                        '${state.cycle + 1248}', cyan),
+                      _TelRow(isEs ? 'Estabilidad' : 'Stability',
+                        statusKey == 'stable'
+                          ? (isEs ? 'NORMAL' : 'NORMAL')
+                          : statusKey.toUpperCase(),
+                        BioSenseColor.forStatus(statusKey)),
+                    ])),
+                  const SizedBox(height: 8),
+                  _ConsoleCard(bgCard: bgCard, child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        isEs
+                          ? 'ANÁLISIS DE TRAYECTORIA PHSE'
+                          : 'PHSE TRAJECTORY ANALYSIS',
+                        style: const TextStyle(fontSize: 9,
+                          fontWeight: FontWeight.w800, color: Colors.white38,
+                          letterSpacing: 1.2)),
+                      const SizedBox(height: 10),
+                      Row(children: [
+                        _TlNode(
+                          isEs ? 'PASADO' : 'PAST',
+                          Icons.check_circle_outline,
+                          BioSenseColor.stable),
+                        Expanded(child: Container(
+                          height: 1, color: Colors.white12)),
+                        _TlNode(
+                          isEs ? 'AHORA' : 'NOW',
+                          Icons.radio_button_checked, cyan),
+                        Expanded(child: _DashedLine()),
+                        _TlNode(
+                          isEs ? 'FUTURO' : 'FUTURE',
+                          Icons.circle_outlined, Colors.white24),
+                      ]),
+                      const SizedBox(height: 10),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceAround,
+                        children: [
+                        _TrajStat(
+                          label: isEs ? 'Velocidad' : 'Velocity',
+                          value: state.velocity < -0.002
+                            ? (isEs ? 'Alta' : 'High')
+                            : (isEs ? 'Baja' : 'Low'),
+                          color: state.velocity < -0.002
+                            ? BioSenseColor.warning : BioSenseColor.stable),
+                        _TrajStat(
+                          label: 'Jerk',
+                          value: state.jerk < 0
+                            ? (isEs ? 'Creciente' : 'Rising')
+                            : (isEs ? 'Estable' : 'Stable'),
+                          color: state.jerk < 0
+                            ? BioSenseColor.warning : BioSenseColor.stable),
+                        _TrajStat(
+                          label: isEs ? 'Horizonte' : 'Horizon',
+                          value: state.jerk.abs() > 0.008 ? '96 s' : '24 s',
+                          color: cyan),
+                      ]),
+                    ])),
+                ])),
+              ]),
+              const SizedBox(height: 12),
+
+              // ── VITALES
+              Container(height: 1, color: divClr),
+              const SizedBox(height: 12),
+              Text(
+                isEs
+                  ? 'RESUMEN CLÍNICO DE SIGNOS VITALES'
+                  : 'CRITICAL VITALS CLINICAL SUMMARY',
+                style: const TextStyle(fontSize: 9, fontWeight: FontWeight.w800,
+                  color: Colors.white38, letterSpacing: 1.2)),
+              const SizedBox(height: 10),
+
+              _VitalRow(
+                label: isEs ? 'CARDIOVASCULAR (HRV/FC)' : 'CARDIOVASCULAR (HRV/HR)',
+                value: '72 bpm', delta: '+0.2%',
+                reading: state.hrv, isEs: isEs, cyan: cyan),
+              const SizedBox(height: 8),
+              _VitalRow(
+                label: isEs ? 'FRECUENCIA RESPIRATORIA' : 'RESPIRATORY RATE',
+                value: '16 rpm', delta: 'CV: 0.04',
+                reading: state.resp, isEs: isEs, cyan: cyan),
+              const SizedBox(height: 8),
+              _VitalRow(
+                label: isEs ? 'TEMPERATURA BASAL' : 'BASELINE TEMPERATURE',
+                value: '36.6°C', delta: '+0.1°C',
+                reading: state.temp, isEs: isEs, cyan: cyan),
+              const SizedBox(height: 8),
+              _VitalRow(
+                label: isEs ? 'RESPUESTA GALVÁNICA (GSR)' : 'GALVANIC RESPONSE (GSR)',
+                value: '1.2 µS', delta: '±0.3',
+                reading: state.gsr, isEs: isEs, cyan: cyan),
+              const SizedBox(height: 12),
+
+              // ── PACIENTE
+              _ConsoleCard(bgCard: const Color(0xFF20252B), child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    isEs ? 'REGISTRO DEL PACIENTE' : 'PATIENT RECORD',
+                    style: const TextStyle(fontSize: 9,
+                      fontWeight: FontWeight.w800, color: Colors.white38,
+                      letterSpacing: 1.2)),
+                  const SizedBox(height: 8),
+                  _TelRow(isEs ? 'Paciente' : 'Patient',
+                    app.userName, Colors.white70),
+                  _TelRow(isEs ? 'Perfil' : 'Profile',
+                    _profileName(app.currentProfile, isEs), Colors.white70),
+                  _TelRow(isEs ? 'Ciclos de sesión' : 'Session cycles',
+                    '${state.cycle + 1248}', cyan),
+                  _TelRow(isEs ? 'Línea base' : 'Baseline',
+                    app.baselineLocked
+                      ? (isEs ? 'ESTABLECIDA' : 'LOCKED')
+                      : (isEs ? 'APRENDIENDO' : 'LEARNING'),
+                    app.baselineLocked
+                      ? BioSenseColor.stable : BioSenseColor.warning),
+                ])),
+              const SizedBox(height: 16),
+
+              // ── PDF
+              SizedBox(height: 52,
+                child: ElevatedButton.icon(
+                  onPressed: () => _generatePdf(context, app, state, isEs),
+                  icon: const Icon(Icons.picture_as_pdf_outlined, size: 20),
+                  label: Text(
+                    isEs ? 'Generar Reporte PDF' : 'Generate PDF Report',
+                    style: BioSenseText.subtitle.copyWith(color: Colors.white)),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: BioSenseColor.primary,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(
+                        BioSenseRadius.sm))),
+                )),
+              const SizedBox(height: 16),
+              const Center(child: Text(
+                'BioSense v1.0  |  ALTEA-GARAY HTS  |  USPTO #63/914,860',
+                style: TextStyle(fontSize: 9, color: Color(0xFF566573),
+                  letterSpacing: 0.5))),
+              const SizedBox(height: 8),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   Future<void> _generatePdf(BuildContext context, AppStateProvider app,
@@ -375,72 +391,70 @@ class _ClinicalSummaryScreenState extends State<ClinicalSummaryScreen>
     final pdf = pw.Document();
     final now = DateTime.now();
     final dateStr = isEs
-        ? '${now.day}/${now.month}/${now.year}'
-        : '${now.month}/${now.day}/${now.year}';
-
-    final lines = <pw.Widget>[
-      pw.Container(
-        color: PdfColor.fromHex('1B1F24'),
-        padding: const pw.EdgeInsets.all(16),
-        child: pw.Column(
-          crossAxisAlignment: pw.CrossAxisAlignment.start,
-          children: [
-            pw.Text('BioSense Clinical Console',
-              style: pw.TextStyle(fontSize: 18,
-                fontWeight: pw.FontWeight.bold, color: PdfColors.white)),
-            pw.Text('PHSE Predictive Engine  |  ALTEA-GARAY HTS',
-              style: pw.TextStyle(fontSize: 9, color: PdfColors.grey400)),
-          ])),
-      pw.SizedBox(height: 16),
-      pw.Text(isEs ? 'Paciente: ' + app.userName : 'Patient: ' + app.userName),
-      pw.Text(isEs ? 'Fecha: ' + dateStr : 'Date: ' + dateStr),
-      pw.SizedBox(height: 12),
-      pw.Text('PHYSIOLOGICAL STATUS',
-        style: pw.TextStyle(fontSize: 11, fontWeight: pw.FontWeight.bold)),
-      pw.SizedBox(height: 6),
-      pw.Text('DHSI: ' + state.dhsi.toStringAsFixed(3) +
-        ' (' + state.dhsiPercentage.toString() + '%)'),
-      pw.Text((isEs ? 'Confianza: ' : 'Confidence: ') +
-        (state.confidenceLevel * 100).round().toString() + '%'),
-      pw.SizedBox(height: 12),
-      pw.Text('PHSE ENGINE TELEMETRY',
-        style: pw.TextStyle(fontSize: 11, fontWeight: pw.FontWeight.bold)),
-      pw.SizedBox(height: 6),
-      pw.Text('Model Sync: 100.0%'),
-      pw.Text('Prediction Horizon: 90 ns'),
-      pw.Text('Algorithm Confidence: ' +
-        (state.confidenceLevel * 100).toStringAsFixed(2) + '%'),
-      pw.Text('Samples Processed: ' + (state.cycle + 1248).toString()),
-      pw.SizedBox(height: 12),
-      pw.Text('CRITICAL VITALS',
-        style: pw.TextStyle(fontSize: 11, fontWeight: pw.FontWeight.bold)),
-      pw.SizedBox(height: 6),
-      pw.Text('Cardiovascular (HRV): ' + _statusText(state.hrv.status, isEs)),
-      pw.Text((isEs ? 'Temperatura basal: ' : 'Baseline temperature: ') +
-        _statusText(state.temp.status, isEs)),
-      pw.Text((isEs ? 'Respiración: ' : 'Breathing: ') +
-        _statusText(state.resp.status, isEs)),
-      pw.Text((isEs ? 'Respuesta galvánica: ' : 'Galvanic response: ') +
-        _statusText(state.gsr.status, isEs)),
-      pw.SizedBox(height: 16),
-      pw.Container(
-        padding: const pw.EdgeInsets.all(10),
-        color: PdfColors.grey100,
-        child: pw.Text(
-          isEs
-            ? 'AVISO: Este reporte es informativo. BioSense no emite diagnósticos. La interpretación clínica corresponde al profesional de la salud.'
-            : 'NOTICE: This report is informational. BioSense does not diagnose. Clinical interpretation belongs to the healthcare professional.',
-          style: pw.TextStyle(fontSize: 9, color: PdfColors.grey700))),
-      pw.SizedBox(height: 8),
-      pw.Text('BioSense v1.0  |  ALTEA-GARAY HTS  |  USPTO #63/914,860',
-        style: pw.TextStyle(fontSize: 8, color: PdfColors.grey500)),
-    ];
+      ? '\( {now.day}/ \){now.month}/${now.year}'
+      : '\( {now.month}/ \){now.day}/${now.year}';
 
     pdf.addPage(pw.Page(
       pageFormat: PdfPageFormat.a4,
       build: (ctx) => pw.Column(
         crossAxisAlignment: pw.CrossAxisAlignment.start,
-        children: lines)));
+        children: [
+          pw.Container(
+            color: PdfColor.fromHex('1B1F24'),
+            padding: const pw.EdgeInsets.all(16),
+            child: pw.Column(
+              crossAxisAlignment: pw.CrossAxisAlignment.start,
+              children: [
+                pw.Text('BioSense Clinical Console',
+                  style: pw.TextStyle(fontSize: 18,
+                    fontWeight: pw.FontWeight.bold,
+                    color: PdfColors.white)),
+                pw.Text('PHSE Predictive Engine  |  ALTEA-GARAY HTS',
+                  style: pw.TextStyle(fontSize: 9,
+                    color: PdfColors.grey400)),
+              ])),
+          pw.SizedBox(height: 16),
+          pw.Text(isEs
+            ? 'Paciente: ' + app.userName
+            : 'Patient: ' + app.userName),
+          pw.Text(isEs ? 'Fecha: ' + dateStr : 'Date: ' + dateStr),
+          pw.SizedBox(height: 12),
+          pw.Text(isEs ? 'ESTADO FISIOLÓGICO' : 'PHYSIOLOGICAL STATUS',
+            style: pw.TextStyle(fontSize: 11,
+              fontWeight: pw.FontWeight.bold)),
+          pw.SizedBox(height: 6),
+          pw.Text('DHSI: ' + state.dhsi.toStringAsFixed(3) +
+            ' (' + state.dhsiPercentage.toString() + '%)'),
+          pw.Text((isEs ? 'Confianza: ' : 'Confidence: ') +
+            (state.confidenceLevel * 100).round().toString() + '%'),
+          pw.SizedBox(height: 12),
+          pw.Text(isEs ? 'SIGNOS VITALES' : 'CRITICAL VITALS',
+            style: pw.TextStyle(fontSize: 11,
+              fontWeight: pw.FontWeight.bold)),
+          pw.SizedBox(height: 6),
+          pw.Text((isEs ? 'Cardiovascular: ' : 'Cardiovascular: ') +
+            _statusText(state.hrv.status, isEs)),
+          pw.Text((isEs ? 'Temperatura: ' : 'Temperature: ') +
+            _statusText(state.temp.status, isEs)),
+          pw.Text((isEs ? 'Respiración: ' : 'Breathing: ') +
+            _statusText(state.resp.status, isEs)),
+          pw.Text((isEs ? 'Respuesta galvánica: ' : 'Galvanic response: ') +
+            _statusText(state.gsr.status, isEs)),
+          pw.SizedBox(height: 16),
+          pw.Container(
+            padding: const pw.EdgeInsets.all(10),
+            color: PdfColors.grey100,
+            child: pw.Text(
+              isEs
+                ? 'AVISO: Este reporte es informativo. BioSense no emite diagnósticos médicos.'
+                : 'NOTICE: This report is informational. BioSense does not issue medical diagnoses.',
+              style: pw.TextStyle(fontSize: 9,
+                color: PdfColors.grey700))),
+          pw.SizedBox(height: 8),
+          pw.Text(
+            'BioSense v1.0  |  ALTEA-GARAY HTS  |  USPTO #63/914,860',
+            style: pw.TextStyle(fontSize: 8, color: PdfColors.grey500)),
+        ])));
 
     await Printing.layoutPdf(
       onLayout: (_) async => pdf.save(),
@@ -448,7 +462,7 @@ class _ClinicalSummaryScreenState extends State<ClinicalSummaryScreen>
   }
 }
 
-// ── Widgets auxiliares para el modo oscuro
+// ── Widgets auxiliares
 
 class _SecBadge extends StatelessWidget {
   final String label;
@@ -469,8 +483,7 @@ class _SecBadge extends StatelessWidget {
       Text(label, style: TextStyle(
         fontSize: 9, fontWeight: FontWeight.w800,
         color: color, letterSpacing: 0.8)),
-    ]),
-  );
+    ]));
 }
 
 class _TacticalLevel extends StatelessWidget {
@@ -479,22 +492,25 @@ class _TacticalLevel extends StatelessWidget {
   final bool active;
   final AnimationController ctrl;
   final double minOpacity;
-  const _TacticalLevel({required this.label, required this.color,
-    required this.active, required this.ctrl, required this.minOpacity});
+
+  const _TacticalLevel({
+    required this.label, required this.color,
+    required this.active, required this.ctrl,
+    required this.minOpacity});
 
   @override
   Widget build(BuildContext context) {
     if (!active) {
       return Container(
-        width: double.infinity, padding: const EdgeInsets.all(6),
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
         decoration: BoxDecoration(
           color: const Color(0xFF20252B),
           borderRadius: BorderRadius.circular(6),
           border: Border.all(color: Colors.white10)),
-        child: Text(label, style: const TextStyle(
-          fontSize: 9, fontWeight: FontWeight.w700,
-          color: Colors.white24, letterSpacing: 0.8),
-          textAlign: TextAlign.center));
+        child: Text(label, textAlign: TextAlign.center,
+          style: const TextStyle(fontSize: 9, fontWeight: FontWeight.w700,
+            color: Colors.white24, letterSpacing: 0.8)));
     }
 
     return AnimatedBuilder(
@@ -502,7 +518,8 @@ class _TacticalLevel extends StatelessWidget {
       builder: (_, __) => Opacity(
         opacity: minOpacity + (1.0 - minOpacity) * ctrl.value,
         child: Container(
-          width: double.infinity, padding: const EdgeInsets.all(6),
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
           decoration: BoxDecoration(
             color: color.withOpacity(0.12),
             borderRadius: BorderRadius.circular(6),
@@ -510,12 +527,9 @@ class _TacticalLevel extends StatelessWidget {
             boxShadow: [BoxShadow(
               color: color.withOpacity(0.2),
               blurRadius: 8, spreadRadius: 1)]),
-          child: Text(label, style: TextStyle(
-            fontSize: 9, fontWeight: FontWeight.w800,
-            color: color, letterSpacing: 0.8),
-            textAlign: TextAlign.center)),
-      ),
-    );
+          child: Text(label, textAlign: TextAlign.center,
+            style: TextStyle(fontSize: 9, fontWeight: FontWeight.w800,
+              color: color, letterSpacing: 0.8)))));
   }
 }
 
@@ -529,7 +543,7 @@ class _ConsoleCard extends StatelessWidget {
     padding: const EdgeInsets.all(12),
     decoration: BoxDecoration(
       color: bgCard,
-      borderRadius: BorderRadius.circular(BioSenseRadius.sm),
+      borderRadius: BorderRadius.circular(8),
       border: Border.all(color: Colors.white10)),
     child: child);
 }
@@ -547,11 +561,10 @@ class _TelRow extends StatelessWidget {
         decoration: const BoxDecoration(
           color: Color(0xFF4FC3F7), shape: BoxShape.circle)),
       const SizedBox(width: 6),
-      Expanded(child: Text(label,
-        style: const TextStyle(fontSize: 11, color: Colors.white54))),
+      Expanded(child: Text(label, style: const TextStyle(
+        fontSize: 11, color: Colors.white54))),
       Text(value, style: TextStyle(
-        fontSize: 11, fontWeight: FontWeight.w700,
-        color: valueColor,
+        fontSize: 11, fontWeight: FontWeight.w700, color: valueColor,
         fontFeatures: const [FontFeature.tabularFigures()])),
     ]));
 }
@@ -561,9 +574,10 @@ class _VitalRow extends StatelessWidget {
   final ChannelReading reading;
   final bool isEs;
   final Color cyan;
-  const _VitalRow({required this.label, required this.value,
-    required this.delta, required this.reading,
-    required this.isEs, required this.cyan});
+
+  const _VitalRow({
+    required this.label, required this.value, required this.delta,
+    required this.reading, required this.isEs, required this.cyan});
 
   Color get _statusColor {
     switch (reading.status) {
@@ -578,8 +592,8 @@ class _VitalRow extends StatelessWidget {
     switch (reading.status) {
       case ChannelStatus.normal:   return isEs ? 'ESTABLE' : 'STABLE';
       case ChannelStatus.leve:     return 'WATCH';
-      case ChannelStatus.moderado: return 'ALERT';
-      case ChannelStatus.alto:     return 'CRITICAL';
+      case ChannelStatus.moderado: return isEs ? 'ALERTA' : 'ALERT';
+      case ChannelStatus.alto:     return isEs ? 'CRÍTICO' : 'CRITICAL';
     }
   }
 
@@ -588,7 +602,7 @@ class _VitalRow extends StatelessWidget {
     padding: const EdgeInsets.all(12),
     decoration: BoxDecoration(
       color: const Color(0xFF20252B),
-      borderRadius: BorderRadius.circular(BioSenseRadius.sm),
+      borderRadius: BorderRadius.circular(8),
       border: Border.all(color: _statusColor.withOpacity(0.25))),
     child: Row(children: [
       Expanded(child: Column(
@@ -598,13 +612,12 @@ class _VitalRow extends StatelessWidget {
             fontWeight: FontWeight.w800, color: Colors.white38,
             letterSpacing: 0.8)),
           const SizedBox(height: 4),
-          Text(value, style: TextStyle(fontSize: 24,
+          Text(value, style: TextStyle(fontSize: 22,
             fontWeight: FontWeight.w300, color: cyan, letterSpacing: -0.5,
             fontFeatures: const [FontFeature.tabularFigures()])),
-          Text('Baseline Delta: ' + delta, style: const TextStyle(
-            fontSize: 10, color: Colors.white38)),
-        ],
-      )),
+          Text(isEs ? 'Delta basal: ' + delta : 'Baseline Delta: ' + delta,
+            style: const TextStyle(fontSize: 10, color: Colors.white38)),
+        ])),
       Container(
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
         decoration: BoxDecoration(
@@ -612,8 +625,8 @@ class _VitalRow extends StatelessWidget {
           borderRadius: BorderRadius.circular(4),
           border: Border.all(color: _statusColor.withOpacity(0.4))),
         child: Text(_statusLabel, style: TextStyle(
-          fontSize: 10, fontWeight: FontWeight.w800, color: _statusColor,
-          letterSpacing: 0.8))),
+          fontSize: 10, fontWeight: FontWeight.w800,
+          color: _statusColor, letterSpacing: 0.8))),
     ]));
 }
 
@@ -626,28 +639,10 @@ class _TlNode extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Column(children: [
     Icon(icon, color: color, size: 14),
-    Text(label, style: TextStyle(fontSize: 7,
-      color: color, fontWeight: FontWeight.w800, letterSpacing: 0.5)),
+    const SizedBox(height: 2),
+    Text(label, style: TextStyle(fontSize: 7, color: color,
+      fontWeight: FontWeight.w800, letterSpacing: 0.5)),
   ]);
-}
-
-class _DashedLine extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) => SizedBox(height: 1,
-    child: CustomPaint(painter: _DashPainter()));
-}
-
-class _DashPainter extends CustomPainter {
-  @override
-  void paint(Canvas c, Size s) {
-    final p = Paint()..color = Colors.white24..strokeWidth = 1;
-    double x = 0;
-    while (x < s.width) {
-      c.drawLine(Offset(x, 0), Offset(x + 4, 0), p);
-      x += 8;
-    }
-  }
-  @override bool shouldRepaint(_) => false;
 }
 
 class _TrajStat extends StatelessWidget {
@@ -662,4 +657,24 @@ class _TrajStat extends StatelessWidget {
       fontWeight: FontWeight.w700, color: color)),
     Text(label, style: const TextStyle(fontSize: 9, color: Colors.white38)),
   ]);
+}
+
+class _DashedLine extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) => SizedBox(
+    height: 1, child: CustomPaint(painter: _DashPainter()));
+}
+
+class _DashPainter extends CustomPainter {
+  @override
+  void paint(Canvas c, Size s) {
+    final p = Paint()..color = Colors.white24..strokeWidth = 1;
+    double x = 0;
+    while (x < s.width) {
+      c.drawLine(Offset(x, 0), Offset(x + 4, 0), p);
+      x += 8;
+    }
+  }
+  @override
+  bool shouldRepaint(_DashPainter _) => false;
 }
