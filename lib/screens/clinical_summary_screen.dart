@@ -11,6 +11,7 @@ import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 import '../providers/app_state_provider.dart';
 import '../models/health_state.dart';
+import '../models/user_profile.dart';
 import '../design/biosense_theme.dart';
 
 class ClinicalSummaryScreen extends StatefulWidget {
