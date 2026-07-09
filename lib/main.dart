@@ -1,14 +1,6 @@
 // ============================================================
-// BIOSENSE — Main Entry Point
-// Early Homeostasis Deviation Alert
+// BIOSENSE OS — Main Entry Point v2.0
 // ALTEA-GARAY HTS | USPTO Provisional #63/914,860
-//
-// Arquitectura:
-//   Flutter → AppStateProvider → HealthRepository → DHSIEngine
-//                                                       │
-//                                  ┌────────────────────┼────────────────────┐
-//                                  ▼                    ▼                    ▼
-//                            KalmanFilter         DHSICalculator       TrendDetector
 // ============================================================
 
 import 'package:flutter/material.dart';
@@ -31,7 +23,6 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
 
-  // Inicializar EventLog (carga eventos previos de SharedPreferences)
   final eventLog = EventLog();
   await eventLog.load();
 
@@ -44,8 +35,7 @@ class BioSenseApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // ── Composición de dependencias (Dependency Injection manual) ──
-    final profileManager = ProfileManager();
+    final profileManager  = ProfileManager();
     final dhsiEngine      = DHSIEngine(profileManager: profileManager);
     final bleService      = BleService();
     final healthRepository = HealthRepository(
@@ -53,8 +43,8 @@ class BioSenseApp extends StatelessWidget {
       bleService: bleService,
       eventLog: eventLog,
     );
-    final voiceManager   = VoiceManager();
-    final localization    = LocalizationManager();
+    final voiceManager  = VoiceManager();
+    final localization  = LocalizationManager();
 
     return ChangeNotifierProvider(
       create: (_) => AppStateProvider(
@@ -71,37 +61,14 @@ class BioSenseApp extends StatelessWidget {
           GlobalCupertinoLocalizations.delegate,
         ],
         supportedLocales: const [Locale('es'), Locale('en')],
-        // ✅ Tema corregido: todo dentro de ThemeData
-        theme: ThemeData(
-          useMaterial3: true,
-          brightness: Brightness.light,
-          appBarTheme: const AppBarTheme(
-            backgroundColor: Colors.white,
-            elevation: 0,
-            centerTitle: false,
-            titleTextStyle: TextStyle(
-              color: Color(0xFF1F4E79), 
-              fontSize: 18, 
-              fontWeight: FontWeight.bold
-            ),
-          ),
-          elevatedButtonTheme: ElevatedButtonThemeData(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF1F4E79),
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(14)
-              ),
-            ),
-          ),
-        ),
+        theme: BioSenseTheme.theme,
         home: const SplashScreen(),
       ),
     );
   }
 }
 
-// ── Pantalla de bienvenida ────────────────────────────────────
+// ── Splash Screen elegante
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
   @override
@@ -112,122 +79,163 @@ class _SplashScreenState extends State<SplashScreen>
     with SingleTickerProviderStateMixin {
   late AnimationController _ctrl;
   late Animation<double> _fade;
-  late Animation<double> _scale;
+  double _progress = 0.0;
+  String _status = 'Initializing PHSE engine...';
 
   @override
   void initState() {
     super.initState();
-    _ctrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 1200));
-    _fade  = CurvedAnimation(parent: _ctrl, curve: Curves.easeIn);
-    _scale = Tween<double>(begin: 0.8, end: 1.0)
-        .animate(CurvedAnimation(parent: _ctrl, curve: Curves.easeOutBack));
+    _ctrl = AnimationController(
+      vsync: this, duration: const Duration(milliseconds: 800));
+    _fade = CurvedAnimation(parent: _ctrl, curve: Curves.easeIn);
     _ctrl.forward();
+    _runSequence();
+  }
 
-    Future.delayed(const Duration(milliseconds: 2200), () {
-      if (mounted) {
-        // ✅ Corregido: accedemos al provider correctamente
-        Provider.of<AppStateProvider>(context, listen: false).connectMockMode();
-        Navigator.of(context).pushReplacement(
-          PageRouteBuilder(
-            pageBuilder: (_, __, ___) => const MainNavigationScreen(),
-            transitionsBuilder: (_, anim, __, child) =>
-                FadeTransition(opacity: anim, child: child),
-            transitionDuration: const Duration(milliseconds: 600),
-          ),
-        );
-      }
-    });
+  Future<void> _runSequence() async {
+    await Future.delayed(const Duration(milliseconds: 200));
+    _update(0.20, 'Initializing PHSE engine...');
+    await Future.delayed(const Duration(milliseconds: 400));
+    _update(0.45, 'Verifying sensor channels...');
+    await Future.delayed(const Duration(milliseconds: 400));
+    _update(0.70, 'Loading physiological profiles...');
+    await Future.delayed(const Duration(milliseconds: 400));
+    _update(0.90, 'Calibrating Kalman filter...');
+    await Future.delayed(const Duration(milliseconds: 400));
+    _update(1.0, 'System ready.');
+    await Future.delayed(const Duration(milliseconds: 300));
+    if (mounted) {
+      Provider.of<AppStateProvider>(context, listen: false).connectMockMode();
+      Navigator.of(context).pushReplacement(
+        PageRouteBuilder(
+          pageBuilder: (_, __, ___) => const MainNavigationScreen(),
+          transitionsBuilder: (_, anim, __, child) =>
+              FadeTransition(opacity: anim, child: child),
+          transitionDuration: const Duration(milliseconds: 500),
+        ),
+      );
+    }
+  }
+
+  void _update(double p, String s) {
+    if (mounted) setState(() { _progress = p; _status = s; });
   }
 
   @override
-  void dispose() { 
-    _ctrl.dispose(); 
-    super.dispose(); 
-  }
+  void dispose() { _ctrl.dispose(); super.dispose(); }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF0F172A),
-      body: Center(
-        child: FadeTransition(
-          opacity: _fade,
-          child: ScaleTransition(
-            scale: _scale,
+      backgroundColor: const Color(0xFF0A1628),
+      body: FadeTransition(
+        opacity: _fade,
+        child: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.all(40),
             child: Column(
-              mainAxisAlignment: MainAxisAlignment.center, 
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Container(
-                  width: 100, height: 100,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF1F4E79),
-                    borderRadius: BorderRadius.circular(28),
-                    boxShadow: [
-                      BoxShadow(
-                        color: const Color(0xFF3B82F6).withOpacity(0.4),
-                        blurRadius: 30, 
-                        spreadRadius: 4
-                      )
-                    ],
-                  ),
-                  child: const Center(child: Text('🫀', style: TextStyle(fontSize: 52))),
-                ),
+                const Spacer(),
+
+                // Isotipo — hexágono con línea ECG
+                CustomPaint(
+                  size: const Size(52, 52),
+                  painter: _IsotypePainter()),
                 const SizedBox(height: 24),
-                const Text(
-                  'BioSense',
-                  style: TextStyle(
-                    fontSize: 36, 
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white, 
-                    letterSpacing: 1
-                  )
-                ),
-                const SizedBox(height: 8),
-                const Text(
-                  'Tu cuerpo habla antes que los síntomas.',
-                  style: TextStyle(
-                    fontSize: 14, 
-                    color: Color(0xFF93C5FD),
-                    fontStyle: FontStyle.italic
-                  )
-                ),
-                const SizedBox(height: 48),
-                const SizedBox(
-                  width: 28, height: 28,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2.5, 
-                    color: Color(0xFF3B82F6)
-                  )
-                ),
-                const SizedBox(height: 16),
-                const Text(
-                  'Iniciando motor predictivo…',
-                  style: TextStyle(
-                    fontSize: 12, 
-                    color: Color(0xFF64748B)
-                  )
-                ),
-                const SizedBox(height: 60),
-                const Text(
-                  'Powered by Phoenix-UCC v7.3',
-                  style: TextStyle(
-                    fontSize: 10, 
-                    color: Color(0xFF334155), 
-                    letterSpacing: 0.5
-                  )
-                ),
-                const Text(
-                  'ALTEA-GARAY HTS | USPTO #63/914,860',
-                  style: TextStyle(
-                    fontSize: 9, 
-                    color: Color(0xFF1E293B)
-                  )
-                ),
-              ]
+
+                // Logotipo
+                RichText(text: const TextSpan(children: [
+                  TextSpan(text: 'Bio',
+                    style: TextStyle(fontSize: 36, fontWeight: FontWeight.w300,
+                      color: Colors.white70, letterSpacing: -1)),
+                  TextSpan(text: 'Sense',
+                    style: TextStyle(fontSize: 36, fontWeight: FontWeight.w800,
+                      color: Color(0xFF10AC84), letterSpacing: -1)),
+                ])),
+                const SizedBox(height: 6),
+                const Text('Predictive Vital Monitoring System',
+                  style: TextStyle(fontSize: 12, color: Colors.white38,
+                    letterSpacing: 0.5)),
+                const Text('ALTEA-GARAY HTS  ·  USPTO #63/914,860',
+                  style: TextStyle(fontSize: 10, color: Colors.white24,
+                    letterSpacing: 0.3)),
+
+                const Spacer(),
+
+                // Barra de progreso
+                Text(_status,
+                  style: const TextStyle(fontSize: 11,
+                    color: Color(0xFF10AC84), letterSpacing: 0.5)),
+                const SizedBox(height: 12),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(2),
+                  child: LinearProgressIndicator(
+                    value: _progress,
+                    backgroundColor: Colors.white10,
+                    valueColor: const AlwaysStoppedAnimation<Color>(
+                      Color(0xFF10AC84)),
+                    minHeight: 2)),
+
+                const SizedBox(height: 40),
+              ],
             ),
           ),
         ),
       ),
     );
+  }
+}
+
+// Isotipo: hexágono abierto con línea ECG
+class _IsotypePainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final p = Paint()
+      ..color = const Color(0xFF10AC84)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.5
+      ..strokeCap = StrokeCap.round;
+
+    final w = size.width;
+    final h = size.height;
+
+    // Hexágono abierto (5 lados — sin lado inferior)
+    final hex = Path()
+      ..moveTo(w * 0.5, 0)
+      ..lineTo(w, h * 0.25)
+      ..lineTo(w, h * 0.75)
+      ..lineTo(w * 0.5, h)
+      ..lineTo(0, h * 0.75)
+      ..lineTo(0, h * 0.25)
+      ..lineTo(w * 0.5, 0);
+    canvas.drawPath(hex, p);
+
+    // Línea ECG dentro
+    final ecg = Paint()
+      ..color = Colors.white70
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.2
+      ..strokeCap = StrokeCap.round
+      ..strokeJoin = StrokeJoin.round;
+
+    final ecgPath = Path()
+      ..moveTo(w * 0.10, h * 0.50)
+      ..lineTo(w * 0.28, h * 0.50)
+      ..lineTo(w * 0.35, h * 0.28)
+      ..lineTo(w * 0.42, h * 0.72)
+      ..lineTo(w * 0.50, h * 0.50)
+      ..lineTo(w * 0.90, h * 0.50);
+    canvas.drawPath(ecgPath, ecgPaint: ecg);
+  }
+
+  @override
+  bool shouldRepaint(_) => false;
+}
+
+extension on Path {
+  void drawPath(Canvas canvas, {required Paint ecgPaint}) {
+    canvas.drawPath(this, ecgPaint);
   }
 }
