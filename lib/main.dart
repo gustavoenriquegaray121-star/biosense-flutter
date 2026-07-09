@@ -155,7 +155,7 @@ class _SplashScreenState extends State<SplashScreen>
                       color: Color(0xFF10AC84), letterSpacing: -1)),
                 ])),
                 const SizedBox(height: 6),
-                const Text('Predictive Vital Monitoring System  ·  Sistema Predictivo',
+                const Text('Predictive Vital Monitoring System',
                   style: TextStyle(fontSize: 12, color: Colors.white38,
                     letterSpacing: 0.5)),
                 const Text('ALTEA-GARAY HTS  ·  USPTO #63/914,860',
