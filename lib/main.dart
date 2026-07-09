@@ -155,7 +155,7 @@ class _SplashScreenState extends State<SplashScreen>
                       color: Color(0xFF10AC84), letterSpacing: -1)),
                 ])),
                 const SizedBox(height: 6),
-                const Text('Predictive Vital Monitoring System',
+                const Text('Predictive Vital Monitoring System  ·  Sistema Predictivo',
                   style: TextStyle(fontSize: 12, color: Colors.white38,
                     letterSpacing: 0.5)),
                 const Text('ALTEA-GARAY HTS  ·  USPTO #63/914,860',
@@ -192,16 +192,16 @@ class _SplashScreenState extends State<SplashScreen>
 class _IsotypePainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
-    final p = Paint()
+    final w = size.width;
+    final h = size.height;
+
+    // Hexágono
+    final hexPaint = Paint()
       ..color = const Color(0xFF10AC84)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1.5
       ..strokeCap = StrokeCap.round;
 
-    final w = size.width;
-    final h = size.height;
-
-    // Hexágono abierto (5 lados — sin lado inferior)
     final hex = Path()
       ..moveTo(w * 0.5, 0)
       ..lineTo(w, h * 0.25)
@@ -210,10 +210,10 @@ class _IsotypePainter extends CustomPainter {
       ..lineTo(0, h * 0.75)
       ..lineTo(0, h * 0.25)
       ..lineTo(w * 0.5, 0);
-    canvas.drawPath(hex, p);
+    canvas.drawPath(hex, hexPaint);
 
-    // Línea ECG dentro
-    final ecg = Paint()
+    // Línea ECG
+    final ecgPaint = Paint()
       ..color = Colors.white70
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1.2
@@ -227,15 +227,9 @@ class _IsotypePainter extends CustomPainter {
       ..lineTo(w * 0.42, h * 0.72)
       ..lineTo(w * 0.50, h * 0.50)
       ..lineTo(w * 0.90, h * 0.50);
-    canvas.drawPath(ecgPath, ecgPaint: ecg);
+    canvas.drawPath(ecgPath, ecgPaint);
   }
 
   @override
-  bool shouldRepaint(_) => false;
-}
-
-extension on Path {
-  void drawPath(Canvas canvas, {required Paint ecgPaint}) {
-    canvas.drawPath(this, ecgPaint);
-  }
+  bool shouldRepaint(_IsotypePainter _) => false;
 }
