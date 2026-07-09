@@ -608,9 +608,6 @@ class _HexGridPainter extends CustomPainter {
     final path = Path();
     for (int i = 0; i < 6; i++) {
       final angle = (i * 60 - 30) * 3.14159 / 180;
-      final x = center.dx + r * 0.866 * 2 / 2 * (i.isEven ? 1 : -1);
-      final dx = center.dx + r * (i < 3 ? 1 : -1) * 0.5;
-      _ = dx; _ = x;
       final px = center.dx + r * _cos(angle);
       final py = center.dy + r * _sin(angle);
       if (i == 0) path.moveTo(px, py); else path.lineTo(px, py);
@@ -623,8 +620,6 @@ class _HexGridPainter extends CustomPainter {
     : a < 3.14159 ? -(1-(3.14159-a)*(3.14159-a)/2) : -_cos(a-3.14159));
   double _sin(double a) => _cos(a - 1.5708);
 
-  dynamic get _ => null;
-  set _(v) {}
 
   @override
   bool shouldRepaint(_HexGridPainter _) => false;
