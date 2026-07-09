@@ -11,6 +11,7 @@ import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 import '../providers/app_state_provider.dart';
 import '../models/health_state.dart';
+import '../models/user_profile.dart';        // ← AÑADIR ESTA LÍNEA
 import '../design/biosense_theme.dart';
 
 class ClinicalSummaryScreen extends StatefulWidget {
@@ -142,7 +143,7 @@ class _ClinicalSummaryScreenState extends State<ClinicalSummaryScreen>
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
 
-              // ── HEADER
+              // HEADER
               Row(children: [
                 _SecBadge(label: 'SECURE AES-256', color: BioSenseColor.stable),
                 const SizedBox(width: 8),
@@ -167,7 +168,7 @@ class _ClinicalSummaryScreenState extends State<ClinicalSummaryScreen>
               Container(height: 1, color: divClr),
               const SizedBox(height: 12),
 
-              // ── AVISO
+              // AVISO
               Container(
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
@@ -183,7 +184,7 @@ class _ClinicalSummaryScreenState extends State<ClinicalSummaryScreen>
                     color: Color(0xFFF39C12), height: 1.4))),
               const SizedBox(height: 16),
 
-              // ── BODY: SEMÁFORO + TELEMETRÍA
+              // BODY: SEMÁFORO + TELEMETRÍA
               Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
 
                 // COLUMNA 1 — SEMÁFORO TÁCTICO
