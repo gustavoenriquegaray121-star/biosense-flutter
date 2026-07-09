@@ -67,13 +67,6 @@ class _ClinicalSummaryScreenState extends State<ClinicalSummaryScreen>
     }
   }
 
-  AnimationController _ctrlFor(String key) {
-    switch(key) {
-      case 'fatigue': return _watchCtrl;
-      case 'alert':   return _preventCtrl;
-      case 'danger':  return _critCtrl;
-      default:        return _stableCtrl;
-    }
   }
 
   @override
@@ -303,7 +296,7 @@ class _ClinicalSummaryScreenState extends State<ClinicalSummaryScreen>
                       color: Colors.white38, letterSpacing: 1.2)),
                   const SizedBox(height: 8),
                   _TelRow('Patient', app.userName, Colors.white70),
-                  _TelRow('Profile', app.currentProfile.name.toUpperCase(),
+                  _TelRow('Profile', _profileName(app.currentProfile, isEs),
                     Colors.white70),
                   _TelRow('Session cycles',
                     '${state.cycle + 1248}', cyan),
@@ -343,7 +336,23 @@ class _ClinicalSummaryScreenState extends State<ClinicalSummaryScreen>
     );
   }
 
-  String _statusText(ChannelStatus s, bool isEs) {
+  String _profileName(dynamic profile, bool isEs) {
+    final names = {
+      'nino':        isEs ? 'Infantil' : 'Pediatric',
+      'adolescente': isEs ? 'Adolescente' : 'Adolescent',
+      'adulto':      isEs ? 'Adulto' : 'Adult',
+      'embarazo':    isEs ? 'Embarazo' : 'Pregnancy',
+      'adultoMayor': isEs ? 'Adulto Mayor' : 'Senior',
+      'deportista':  isEs ? 'Deportista' : 'Athletic',
+      'cardiaco':    isEs ? 'Cardíaco' : 'Cardiac',
+      'diabetes':    isEs ? 'Diabetes' : 'Diabetes',
+      'hipertension':isEs ? 'Hipertensión' : 'Hypertension',
+      'respiratorio':isEs ? 'Respiratorio' : 'Respiratory',
+    };
+    return names[profile.name] ?? profile.name.toUpperCase();
+  }
+
+    String _statusText(ChannelStatus s, bool isEs) {
     if (isEs) {
       switch (s) {
         case ChannelStatus.normal:   return 'Normal';
