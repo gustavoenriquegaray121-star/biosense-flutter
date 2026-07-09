@@ -5,6 +5,8 @@
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'dart:io';
+import 'package:image_picker/image_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../providers/app_state_provider.dart';
 import '../core/localization_manager.dart';
@@ -20,6 +22,8 @@ class SettingsScreen extends StatefulWidget {
 class _SettingsScreenState extends State<SettingsScreen> {
   final _nameCtrl = TextEditingController();
   bool _mockMode  = true;
+  String? _photoPath;
+  final _picker = ImagePicker();
 
   @override
   void initState() {
@@ -32,6 +36,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     setState(() {
       _nameCtrl.text = prefs.getString('user_name') ?? '';
       _mockMode = prefs.getBool('mock_mode') ?? true;
+      _photoPath = prefs.getString('user_photo');
     });
   }
 
@@ -39,6 +44,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('user_name', _nameCtrl.text.trim());
     await prefs.setBool('mock_mode', _mockMode);
+    if (_photoPath != null) await prefs.setString('user_photo', _photoPath!);
     if (mounted) {
       context.read<AppStateProvider>().setUserName(_nameCtrl.text.trim());
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
@@ -50,6 +56,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(BioSenseRadius.sm))));
+    }
+  }
+
+  Future<void> _pickPhoto() async {
+    final picked = await _picker.pickImage(
+      source: ImageSource.gallery, imageQuality: 80, maxWidth: 400);
+    if (picked != null) {
+      setState(() => _photoPath = picked.path);
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('user_photo', picked.path);
     }
   }
 
@@ -80,7 +96,49 @@ class _SettingsScreenState extends State<SettingsScreen> {
             // ── IDENTIFICACIÓN DEL PACIENTE
             _SectionHeader(
               isEs ? 'IDENTIFICACIÓN DEL PACIENTE' : 'PATIENT IDENTIFICATION'),
+            // ── FOTO DE PERFIL
             BioSenseTheme.clinicalCard(
+              animate: false,
+              padding: const EdgeInsets.all(BioSenseSpacing.lg),
+              child: Row(children: [
+                GestureDetector(
+                  onTap: _pickPhoto,
+                  child: Container(
+                    width: 64, height: 64,
+                    decoration: BoxDecoration(
+                      color: BioSenseColor.primary.withOpacity(0.08),
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: BioSenseColor.border, width: 1.5),
+                      image: _photoPath != null
+                        ? DecorationImage(
+                            image: FileImage(File(_photoPath!)),
+                            fit: BoxFit.cover)
+                        : null),
+                    child: _photoPath == null
+                      ? const Icon(Icons.person_outline,
+                          color: BioSenseColor.primary, size: 28)
+                      : null),
+                ),
+                const SizedBox(width: BioSenseSpacing.lg),
+                Expanded(child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                  Text(
+                    isEs ? 'Fotografía de perfil' : 'Profile photo',
+                    style: BioSenseText.subtitle),
+                  const SizedBox(height: 4),
+                  Text(
+                    isEs
+                      ? 'Toca para seleccionar desde galería'
+                      : 'Tap to select from gallery',
+                    style: BioSenseText.caption),
+                ])),
+              ]),
+            ),
+            const SizedBox(height: BioSenseSpacing.md),
+
+                        BioSenseTheme.clinicalCard(
               animate: false,
               padding: const EdgeInsets.all(BioSenseSpacing.lg),
               child: Column(
