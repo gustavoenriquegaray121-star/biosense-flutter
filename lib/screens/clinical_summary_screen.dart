@@ -11,7 +11,7 @@ import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 import '../providers/app_state_provider.dart';
 import '../models/health_state.dart';
-import '../models/user_profile.dart';        // ← AÑADIR ESTA LÍNEA
+import '../models/user_profile.dart';
 import '../design/biosense_theme.dart';
 
 class ClinicalSummaryScreen extends StatefulWidget {
@@ -303,7 +303,7 @@ class _ClinicalSummaryScreenState extends State<ClinicalSummaryScreen>
               ]),
               const SizedBox(height: 12),
 
-              // ── VITALES
+              // VITALES
               Container(height: 1, color: divClr),
               const SizedBox(height: 12),
               Text(
@@ -335,7 +335,7 @@ class _ClinicalSummaryScreenState extends State<ClinicalSummaryScreen>
                 reading: state.gsr, isEs: isEs, cyan: cyan),
               const SizedBox(height: 12),
 
-              // ── PACIENTE
+              // PACIENTE
               _ConsoleCard(bgCard: const Color(0xFF20252B), child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -360,7 +360,7 @@ class _ClinicalSummaryScreenState extends State<ClinicalSummaryScreen>
                 ])),
               const SizedBox(height: 16),
 
-              // ── PDF
+              // PDF
               SizedBox(height: 52,
                 child: ElevatedButton.icon(
                   onPressed: () => _generatePdf(context, app, state, isEs),
