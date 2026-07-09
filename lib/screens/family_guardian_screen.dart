@@ -21,7 +21,7 @@ class _FamilyGuardianScreenState extends State<FamilyGuardianScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabs;
   final GuardianManager _guardian = GuardianManager();
-  GuardianToken? _currentToken;
+  GuardianToken? _currentToken; // ignore: unused_field
   Timer? _countdownTimer;
   int _secondsLeft = 60;
 
