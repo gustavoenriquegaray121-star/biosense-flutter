@@ -11,9 +11,9 @@ import 'package:flutter/material.dart';
 // ============================================================
 class BioSenseColor {
   // Fondos
-  static const Color bgPrimary   = Color(0xFFF5F8FD);
-  static const Color surface     = Color(0xFFFFFFFF);
-  static const Color surfaceAlt  = Color(0xFFF0F5FA);
+  static const Color bgPrimary   = Color(0xFFEDF3FA);
+  static const Color surface     = Color(0xFFFBFDFF);
+  static const Color surfaceAlt  = Color(0xFFE8F0F9);
 
   // Identidad
   static const Color primary      = Color(0xFF0A3D62);
