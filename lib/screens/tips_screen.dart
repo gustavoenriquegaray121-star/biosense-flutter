@@ -57,28 +57,44 @@ class TipsScreen extends StatelessWidget {
             itemCount: tips.length,
             separatorBuilder: (_, __) =>
               const SizedBox(height: BioSenseSpacing.md),
-            itemBuilder: (_, i) => BioSenseTheme.clinicalCard(
-              animate: false,
-              padding: const EdgeInsets.all(BioSenseSpacing.lg),
-              child: Row(children: [
-                Container(
-                  width: 44, height: 44,
-                  decoration: BoxDecoration(
-                    color: BioSenseColor.primary.withOpacity(0.08),
-                    borderRadius: BorderRadius.circular(BioSenseRadius.sm)),
-                  child: Icon(tips[i].icon,
-                    color: BioSenseColor.primary, size: 22)),
-                const SizedBox(width: BioSenseSpacing.md),
-                Expanded(child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(tips[i].title, style: BioSenseText.subtitle),
-                    const SizedBox(height: 4),
-                    Text(tips[i].desc, style: BioSenseText.body),
-                  ],
-                )),
-              ]),
-            ),
+            itemBuilder: (_, i) {
+              final colors = [
+                BioSenseColor.accent,
+                BioSenseColor.primary,
+                BioSenseColor.warning,
+                BioSenseColor.accentDark,
+                BioSenseColor.primaryLight,
+              ];
+              final c = colors[i % colors.length];
+              return Container(
+                decoration: BoxDecoration(
+                  color: c.withOpacity(0.07),
+                  borderRadius: BorderRadius.circular(BioSenseRadius.md),
+                  border: Border.all(color: c.withOpacity(0.25)),
+                  boxShadow: [BoxShadow(
+                    color: c.withOpacity(0.08),
+                    blurRadius: 12, offset: const Offset(0,4))]),
+                padding: const EdgeInsets.all(BioSenseSpacing.lg),
+                child: Row(children: [
+                  Container(
+                    width: 48, height: 48,
+                    decoration: BoxDecoration(
+                      color: c.withOpacity(0.15),
+                      borderRadius: BorderRadius.circular(BioSenseRadius.sm),
+                      border: Border.all(color: c.withOpacity(0.3))),
+                    child: Icon(tips[i].icon, color: c, size: 24)),
+                  const SizedBox(width: BioSenseSpacing.md),
+                  Expanded(child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(tips[i].title,
+                        style: BioSenseText.subtitle.copyWith(color: c)),
+                      const SizedBox(height: 4),
+                      Text(tips[i].desc, style: BioSenseText.body),
+                    ])),
+                ]),
+              );
+            },
           ),
         ),
         BioSenseTheme.institutionalFooter(),
