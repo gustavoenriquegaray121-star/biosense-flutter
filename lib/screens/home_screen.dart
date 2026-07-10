@@ -67,9 +67,9 @@ class _HomeScreenState extends State<HomeScreen>
 
     // Pulse dot
     _pulseCtrl = AnimationController(
-      vsync: this, duration: const Duration(milliseconds: 2500))
+      vsync: this, duration: const Duration(milliseconds: 1800))
       ..repeat(reverse: true);
-    _pulseAnim = Tween<double>(begin: 1.0, end: 0.40)
+    _pulseAnim = Tween<double>(begin: 1.0, end: 0.15)
         .animate(CurvedAnimation(parent: _pulseCtrl, curve: Curves.easeInOut));
 
     // Start sequence
@@ -457,7 +457,7 @@ class _HexGridPainter extends CustomPainter {
     final paint = Paint()
       ..color = critical
         ? const Color(0xFFE74C3C).withOpacity(0.04)
-        : const Color(0xFF0A3D62).withOpacity(0.022)
+        : const Color(0xFF0A3D62).withOpacity(0.055)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 0.5;
 
