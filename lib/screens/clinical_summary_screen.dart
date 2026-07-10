@@ -414,24 +414,41 @@ class _ClinicalSummaryScreenState extends State<ClinicalSummaryScreen>
 
 
   IconData _futureIcon(double velocity, double jerk) {
+    final sk = context.read<AppStateProvider>().healthState.statusKey;
+    if (sk == 'danger' || sk == 'critical') return Icons.trending_down;
+    if (sk == 'alert' || sk == 'fatigue')   return Icons.trending_down;
     if (velocity < -0.003 || jerk < -0.005) return Icons.trending_down;
-    if (velocity > 0.003 || jerk > 0.005)   return Icons.trending_up;
+    if (velocity > 0.003)                    return Icons.trending_up;
     return Icons.trending_flat;
   }
 
   Color _futureColor(double velocity, double jerk, String statusKey) {
+    if (statusKey == 'danger' || statusKey == 'critical') return BioSenseColor.alert;
+    if (statusKey == 'alert')   return BioSenseColor.warning;
+    if (statusKey == 'fatigue') return BioSenseColor.warning;
     if (velocity < -0.003 || jerk < -0.005) return BioSenseColor.warning;
-    if (statusKey != 'stable')               return BioSenseColor.warning;
     return BioSenseColor.stable;
   }
 
   String _futureLabel(double velocity, double jerk, bool isEs) {
-    if (velocity < -0.003 || jerk < -0.005) {
+    // Usar statusKey para coherencia con el estado actual
+    final sk = context.read<AppStateProvider>().healthState.statusKey;
+    if (sk == 'danger' || sk == 'critical') {
       return isEs
-        ? 'Tendencia descendente — se recomienda intervención preventiva'
-        : 'Downward trajectory — preventive intervention recommended';
+        ? 'Riesgo predictivo elevado — intervención requerida'
+        : 'Elevated predictive risk — intervention required';
     }
-    if (velocity > 0.003 || jerk > 0.005) {
+    if (sk == 'alert') {
+      return isEs
+        ? 'Desviación predictiva en desarrollo — vigilancia activa'
+        : 'Predictive deviation developing — active monitoring';
+    }
+    if (sk == 'fatigue') {
+      return isEs
+        ? 'Variación preventiva detectada — monitoreo continuo'
+        : 'Preventive variation detected — continuous monitoring';
+    }
+    if (velocity > 0.003) {
       return isEs
         ? 'Tendencia de recuperación — homeostasis mejorando'
         : 'Recovery trajectory — homeostasis improving';
