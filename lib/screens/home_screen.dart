@@ -359,6 +359,18 @@ class _HomeScreenState extends State<HomeScreen>
                     ),
                   ),
                   const SizedBox(height: BioSenseSpacing.xxl),
+
+                  // ── GRÁFICA DHSI 24 HORAS
+                  _Dhsi24hCard(
+                    data: _dhsi24h,
+                    isEs: isEs,
+                    isCrit: isCrit,
+                    color: color),
+                  const SizedBox(height: BioSenseSpacing.md),
+
+                  // ── BOTÓN SOLICITAR AYUDA
+                  _HelpButton(isEs: isEs, isCrit: isCrit),
+                  const SizedBox(height: BioSenseSpacing.xxl),
                   BioSenseTheme.institutionalFooter(dark: isCrit),
                 ],
               ),
