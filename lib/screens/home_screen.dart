@@ -39,6 +39,16 @@ class _HomeScreenState extends State<HomeScreen>
 
   bool _initialized = false;
 
+  // Historial DHSI 24h (144 puntos = cada 10 min)
+  final List<double> _dhsi24h = List.generate(144, (i) {
+    // Simulación realista: baja un poco en la madrugada, sube en el día
+    final hour = (i * 10 / 60) % 24;
+    if (hour < 6)  return 0.88 + (i % 5) * 0.005;
+    if (hour < 12) return 0.92 + (i % 7) * 0.004;
+    if (hour < 18) return 0.95 + (i % 4) * 0.003;
+    return 0.91 + (i % 6) * 0.004;
+  });
+
   @override
   void initState() {
     super.initState();
@@ -470,6 +480,209 @@ class _HomeScreenState extends State<HomeScreen>
   }
 }
 
+
+
+// ── Gráfica DHSI últimas 24 horas
+class _Dhsi24hCard extends StatelessWidget {
+  final List<double> data;
+  final bool isEs, isCrit;
+  final Color color;
+
+  const _Dhsi24hCard({
+    required this.data, required this.isEs,
+    required this.isCrit, required this.color});
+
+  @override
+  Widget build(BuildContext context) => Container(
+    decoration: BoxDecoration(
+      color: isCrit
+        ? BioSenseColor.criticalCard
+        : color.withOpacity(0.06),
+      borderRadius: BorderRadius.circular(BioSenseRadius.md),
+      border: Border.all(color: color.withOpacity(0.22)),
+      boxShadow: [BoxShadow(
+        color: color.withOpacity(0.08),
+        blurRadius: 16, offset: const Offset(0,4))]),
+    padding: const EdgeInsets.all(BioSenseSpacing.lg),
+    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      // Header
+      Row(children: [
+        Icon(Icons.show_chart_outlined,
+          color: color, size: 18),
+        const SizedBox(width: 8),
+        Text(
+          isEs
+            ? 'ÍNDICE HOMEOSTÁTICO — ÚLTIMAS 24 H'
+            : 'HOMEOSTATIC INDEX — LAST 24 H',
+          style: BioSenseText.label.copyWith(color: color)),
+      ]),
+      const SizedBox(height: BioSenseSpacing.md),
+
+      // Gráfica
+      SizedBox(
+        height: 80,
+        child: BioSenseTheme.sparkline(
+          data: data, color: color, height: 80)),
+      const SizedBox(height: BioSenseSpacing.sm),
+
+      // Etiquetas de tiempo
+      Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+        Text('00:00', style: BioSenseText.caption),
+        Text('06:00', style: BioSenseText.caption),
+        Text('12:00', style: BioSenseText.caption),
+        Text('18:00', style: BioSenseText.caption),
+        Text(isEs ? 'Ahora' : 'Now',
+          style: BioSenseText.caption.copyWith(
+            color: color, fontWeight: FontWeight.w700)),
+      ]),
+      const SizedBox(height: BioSenseSpacing.md),
+
+      // Stats rápidas
+      Row(children: [
+        _QuickStat(
+          label: isEs ? 'Promedio' : 'Average',
+          value: '${(data.reduce((a,b) => a+b) / data.length * 100).toStringAsFixed(1)}%',
+          color: color),
+        const SizedBox(width: BioSenseSpacing.sm),
+        _QuickStat(
+          label: isEs ? 'Mínimo' : 'Minimum',
+          value: '${(data.reduce((a,b) => a<b?a:b) * 100).toStringAsFixed(1)}%',
+          color: BioSenseColor.warning),
+        const SizedBox(width: BioSenseSpacing.sm),
+        _QuickStat(
+          label: isEs ? 'Máximo' : 'Maximum',
+          value: '${(data.reduce((a,b) => a>b?a:b) * 100).toStringAsFixed(1)}%',
+          color: BioSenseColor.accentBright),
+      ]),
+    ]),
+  );
+}
+
+class _QuickStat extends StatelessWidget {
+  final String label, value;
+  final Color color;
+  const _QuickStat({required this.label, required this.value,
+    required this.color});
+
+  @override
+  Widget build(BuildContext context) => Expanded(child: Container(
+    padding: const EdgeInsets.symmetric(
+      horizontal: BioSenseSpacing.sm, vertical: BioSenseSpacing.sm),
+    decoration: BoxDecoration(
+      color: color.withOpacity(0.08),
+      borderRadius: BorderRadius.circular(BioSenseRadius.sm),
+      border: Border.all(color: color.withOpacity(0.20))),
+    child: Column(children: [
+      Text(value, style: TextStyle(
+        fontFamily: 'Inter', fontSize: 14,
+        fontWeight: FontWeight.w700, color: color),
+        textAlign: TextAlign.center),
+      Text(label, style: BioSenseText.caption,
+        textAlign: TextAlign.center),
+    ])));
+}
+
+// ── Botón Solicitar Ayuda
+class _HelpButton extends StatelessWidget {
+  final bool isEs, isCrit;
+  const _HelpButton({required this.isEs, required this.isCrit});
+
+  @override
+  Widget build(BuildContext context) => GestureDetector(
+    onTap: () => _showHelpDialog(context),
+    child: AnimatedContainer(
+      duration: BioSenseMotion.slow,
+      padding: const EdgeInsets.all(BioSenseSpacing.lg),
+      decoration: BoxDecoration(
+        color: isCrit
+          ? BioSenseColor.alert.withOpacity(0.15)
+          : BioSenseColor.alert.withOpacity(0.07),
+        borderRadius: BorderRadius.circular(BioSenseRadius.md),
+        border: Border.all(
+          color: BioSenseColor.alert.withOpacity(
+            isCrit ? 0.6 : 0.30),
+          width: isCrit ? 1.5 : 1.0)),
+      child: Row(children: [
+        Container(
+          width: 48, height: 48,
+          decoration: BoxDecoration(
+            color: BioSenseColor.alert.withOpacity(0.15),
+            shape: BoxShape.circle),
+          child: const Icon(Icons.emergency_outlined,
+            color: BioSenseColor.alert, size: 26)),
+        const SizedBox(width: BioSenseSpacing.md),
+        Expanded(child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+          Text(
+            isEs ? 'Solicitar Ayuda' : 'Request Help',
+            style: BioSenseText.subtitle.copyWith(
+              color: BioSenseColor.alert,
+              fontWeight: FontWeight.w800)),
+          Text(
+            isEs
+              ? 'Notifica inmediatamente a tu Red de Acompañamiento Seguro'
+              : 'Immediately notifies your Trusted Care Network',
+            style: BioSenseText.caption),
+        ])),
+        Icon(Icons.chevron_right_outlined,
+          color: BioSenseColor.alert.withOpacity(0.5)),
+      ]),
+    ),
+  );
+
+  void _showHelpDialog(BuildContext context) {
+    final isEs = context.read<AppStateProvider>().language.name == 'es';
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        backgroundColor: BioSenseColor.surface,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(BioSenseRadius.lg),
+          side: const BorderSide(color: BioSenseColor.alert, width: 1.5)),
+        icon: const Icon(Icons.emergency_outlined,
+          color: BioSenseColor.alert, size: 36),
+        title: Text(
+          isEs ? 'Solicitar Ayuda' : 'Request Help',
+          style: BioSenseText.title.copyWith(color: BioSenseColor.alert),
+          textAlign: TextAlign.center),
+        content: Text(
+          isEs
+            ? 'Se notificará a todos tus contactos de confianza con tu estado fisiológico actual y ubicación. ¿Confirmas?'
+            : 'All your trusted contacts will be notified with your current physiological status and location. Confirm?',
+          style: BioSenseText.body,
+          textAlign: TextAlign.center),
+        actionsAlignment: MainAxisAlignment.center,
+        actions: [
+          OutlinedButton(
+            onPressed: () => Navigator.pop(context),
+            style: OutlinedButton.styleFrom(
+              foregroundColor: BioSenseColor.textMuted,
+              side: const BorderSide(color: BioSenseColor.border)),
+            child: Text(isEs ? 'Cancelar' : 'Cancel')),
+          const SizedBox(width: 8),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                content: Text(isEs
+                  ? 'Alerta enviada a tu Red de Acompañamiento Seguro'
+                  : 'Alert sent to your Trusted Care Network'),
+                backgroundColor: BioSenseColor.alert,
+                behavior: SnackBarBehavior.floating,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(BioSenseRadius.sm))));
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: BioSenseColor.alert),
+            child: Text(isEs ? 'Enviar Ayuda' : 'Send Help')),
+        ],
+      ),
+    );
+  }
+}
 
 class _SubjectiveOption {
   final String label;
