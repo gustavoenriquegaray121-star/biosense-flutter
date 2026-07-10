@@ -25,7 +25,6 @@ class _MyHealthScreenState extends State<MyHealthScreen>
   int _sampleCount = 1248;
   double _lastReadingMs = 0.0;
   bool _signalLost = false;
-  int _noSignalSeconds = 0;
 
   // Sparkline data (últimas 30 muestras por canal)
   final List<double> _hrvData  = List.generate(30, (i) => 45.0 + i * 0.1);
@@ -54,7 +53,6 @@ class _MyHealthScreenState extends State<MyHealthScreen>
       final state = app.healthState;
 
       // Simular pérdida de señal en mock mode si no hay cambios
-      _noSignalSeconds++;
       final lost = false; // SIGNAL LOST activo solo con hardware real
 
       setState(() {
@@ -62,7 +60,6 @@ class _MyHealthScreenState extends State<MyHealthScreen>
         _lastReadingMs = (_lastReadingMs + 0.2) % 10.0;
         _signalLost = lost;
         if (!lost) {
-          _noSignalSeconds = 0;
           _sampleCount++;
           _updateSparklines(state);
         }
