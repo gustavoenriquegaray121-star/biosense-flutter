@@ -272,9 +272,35 @@ class _ClinicalSummaryScreenState extends State<ClinicalSummaryScreen>
                         Expanded(child: _DashedLine()),
                         _TlNode(
                           isEs ? 'FUTURO' : 'FUTURE',
-                          Icons.circle_outlined, Colors.white24),
+                          _futureIcon(state.velocity, state.jerk),
+                          _futureColor(state.velocity, state.jerk, statusKey)),
                       ]),
-                      const SizedBox(height: 10),
+                      const SizedBox(height: 8),
+                      // Descripción de trayectoria futura
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: _futureColor(state.velocity, state.jerk, statusKey).withOpacity(0.10),
+                          borderRadius: BorderRadius.circular(6),
+                          border: Border.all(
+                            color: _futureColor(state.velocity, state.jerk, statusKey).withOpacity(0.3))),
+                        child: Row(children: [
+                          Icon(
+                            _futureIcon(state.velocity, state.jerk),
+                            color: _futureColor(state.velocity, state.jerk, statusKey),
+                            size: 16),
+                          const SizedBox(width: 8),
+                          Expanded(child: Text(
+                            _futureLabel(state.velocity, state.jerk, isEs),
+                            style: TextStyle(
+                              fontSize: 11, fontWeight: FontWeight.w600,
+                              color: _futureColor(state.velocity, state.jerk, statusKey)))),
+                          Text(
+                            state.jerk.abs() > 0.008 ? '96 s' : '24 s',
+                            style: TextStyle(fontSize: 11, color: cyan,
+                              fontWeight: FontWeight.w700)),
+                        ])),
+                      const SizedBox(height: 8),
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceAround,
                         children: [
@@ -384,6 +410,35 @@ class _ClinicalSummaryScreenState extends State<ClinicalSummaryScreen>
         ),
       ),
     );
+  }
+
+
+  IconData _futureIcon(double velocity, double jerk) {
+    if (velocity < -0.003 || jerk < -0.005) return Icons.trending_down;
+    if (velocity > 0.003 || jerk > 0.005)   return Icons.trending_up;
+    return Icons.trending_flat;
+  }
+
+  Color _futureColor(double velocity, double jerk, String statusKey) {
+    if (velocity < -0.003 || jerk < -0.005) return BioSenseColor.warning;
+    if (statusKey != 'stable')               return BioSenseColor.warning;
+    return BioSenseColor.stable;
+  }
+
+  String _futureLabel(double velocity, double jerk, bool isEs) {
+    if (velocity < -0.003 || jerk < -0.005) {
+      return isEs
+        ? 'Tendencia descendente — se recomienda intervención preventiva'
+        : 'Downward trajectory — preventive intervention recommended';
+    }
+    if (velocity > 0.003 || jerk > 0.005) {
+      return isEs
+        ? 'Tendencia de recuperación — homeostasis mejorando'
+        : 'Recovery trajectory — homeostasis improving';
+    }
+    return isEs
+      ? 'Sin riesgo predictivo — estado estable proyectado'
+      : 'No predictive risk — stable state projected';
   }
 
   Future<void> _generatePdf(BuildContext context, AppStateProvider app,
