@@ -41,14 +41,12 @@ class _OnboardingScreenState extends State<OnboardingScreen>
 
   // Animación fade entre páginas
   late AnimationController _fadeCtrl;
-  late Animation<double> _fadeAnim;
 
   @override
   void initState() {
     super.initState();
     _fadeCtrl = AnimationController(
       vsync: this, duration: const Duration(milliseconds: 400));
-    _fadeAnim = CurvedAnimation(parent: _fadeCtrl, curve: Curves.easeIn);
     _fadeCtrl.forward();
   }
 
@@ -470,7 +468,7 @@ class _Page4Emergency extends StatelessWidget {
         color: const Color(0xFF10AC84)),
       const SizedBox(height: 8),
       _PermissionRow(
-        icon: Icons.location_outline,
+        icon: Icons.location_on_outlined,
         label: isEs ? 'Ubicación' : 'Location',
         desc: isEs ? 'Coordenadas en alertas de emergencia' : 'Coordinates in emergency alerts',
         color: const Color(0xFFF39C12)),
