@@ -55,7 +55,7 @@ class _MyHealthScreenState extends State<MyHealthScreen>
 
       // Simular pérdida de señal en mock mode si no hay cambios
       _noSignalSeconds++;
-      final lost = !app.isMockMode ? _noSignalSeconds > 25 : false;
+      final lost = false; // SIGNAL LOST activo solo con hardware real
 
       setState(() {
         _now = DateTime.now();
