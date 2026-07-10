@@ -7,7 +7,6 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/app_state_provider.dart';
-import '../widgets/dhsi_gauge.dart';
 import '../widgets/quick_log_bar.dart';
 import '../design/biosense_theme.dart';
 
