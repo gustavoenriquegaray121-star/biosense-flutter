@@ -220,8 +220,8 @@ class _MyHealthScreenState extends State<MyHealthScreen>
                 // Canal: GSR
                 _VitalCard(
                   icon: Icons.water_drop_outlined,
-                  label: isEs ? 'RESPUESTA GALVÁNICA' : 'GALVANIC RESPONSE',
-                  sublabel: isEs ? 'Conductancia de la piel' : 'Skin conductance',
+                  label: isEs ? 'ESTRÉS AUTONÓMICO' : 'AUTONOMIC STRESS INDEX',
+                  sublabel: isEs ? 'Actividad del sistema simpático' : 'Sympathetic nervous system activity',
                   value: '1.2',
                   unit: 'µS',
                   reading: state.gsr,
