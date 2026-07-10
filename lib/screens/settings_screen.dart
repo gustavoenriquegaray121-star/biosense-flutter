@@ -138,8 +138,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
             const SizedBox(height: BioSenseSpacing.md),
 
-                        BioSenseTheme.clinicalCard(
-              animate: false,
+                        Container(
+              decoration: BoxDecoration(
+                color: BioSenseColor.primary.withOpacity(0.06),
+                borderRadius: BorderRadius.circular(BioSenseRadius.md),
+                border: Border.all(color: BioSenseColor.primary.withOpacity(0.20))),
               padding: const EdgeInsets.all(BioSenseSpacing.lg),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -219,22 +222,25 @@ class _SettingsScreenState extends State<SettingsScreen> {
             // ── ALERTAS DE VOZ
             _SectionHeader(
               isEs ? 'ALERTAS DE VOZ — ALTEA' : 'VOICE ALERTS — ALTEA'),
-            BioSenseTheme.clinicalCard(
-              animate: false,
+            Container(
+              decoration: BoxDecoration(
+                color: BioSenseColor.accent.withOpacity(0.06),
+                borderRadius: BorderRadius.circular(BioSenseRadius.md),
+                border: Border.all(color: BioSenseColor.accent.withOpacity(0.25))),
               child: SwitchListTile(
                 value: app.voiceEnabled,
                 onChanged: (v) => app.setVoiceEnabled(v),
-                activeColor: BioSenseColor.primary,
+                activeColor: BioSenseColor.accent,
                 title: Text(
                   isEs ? 'Activar alertas por voz' : 'Enable voice alerts',
-                  style: BioSenseText.subtitle),
+                  style: BioSenseText.subtitle.copyWith(color: BioSenseColor.accent)),
                 subtitle: Text(
                   isEs
                     ? 'El sistema ALTEA emite avisos auditivos al detectar cambios de estado'
                     : 'The ALTEA system emits audio alerts when detecting status changes',
                   style: BioSenseText.caption),
-                secondary: const Icon(Icons.record_voice_over_outlined,
-                  color: BioSenseColor.primary),
+                secondary: Icon(Icons.record_voice_over_outlined,
+                  color: BioSenseColor.accent),
               ),
             ),
             const SizedBox(height: BioSenseSpacing.xxl),
@@ -292,8 +298,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
             // ── CONEXIÓN BLE
             _SectionHeader(
               isEs ? 'CONEXIÓN CON PULSERA BIOSENSE' : 'BIOSENSE BAND CONNECTION'),
-            BioSenseTheme.clinicalCard(
-              animate: false,
+            Container(
+              decoration: BoxDecoration(
+                color: BioSenseColor.warning.withOpacity(0.06),
+                borderRadius: BorderRadius.circular(BioSenseRadius.md),
+                border: Border.all(color: BioSenseColor.warning.withOpacity(0.30))),
               child: SwitchListTile(
                 value: _mockMode,
                 onChanged: (v) {
@@ -301,10 +310,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   if (v) app.connectMockMode();
                   else app.connectHardware();
                 },
-                activeColor: BioSenseColor.primary,
+                activeColor: BioSenseColor.warning,
                 title: Text(
                   isEs ? 'Modo demostración' : 'Demo mode',
-                  style: BioSenseText.subtitle),
+                  style: BioSenseText.subtitle.copyWith(
+                    color: BioSenseColor.warning)),
                 subtitle: Text(
                   _mockMode
                     ? (isEs
@@ -314,8 +324,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         ? 'Buscando pulsera BioSense por Bluetooth...'
                         : 'Searching for BioSense band via Bluetooth...'),
                   style: BioSenseText.caption),
-                secondary: const Icon(Icons.bluetooth_outlined,
-                  color: BioSenseColor.primary),
+                secondary: Icon(Icons.bluetooth_outlined,
+                  color: BioSenseColor.warning),
               ),
             ),
             const SizedBox(height: BioSenseSpacing.xxl),
