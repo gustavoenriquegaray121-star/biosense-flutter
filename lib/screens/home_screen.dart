@@ -397,54 +397,86 @@ class _HomeScreenState extends State<HomeScreen>
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(
           top: Radius.circular(BioSenseRadius.lg))),
-      builder: (_) => Padding(
-        padding: const EdgeInsets.all(BioSenseSpacing.xl),
-        child: Column(mainAxisSize: MainAxisSize.min, children: [
-          Container(width: 36, height: 3,
-            decoration: BoxDecoration(
-              color: BioSenseColor.border,
-              borderRadius: BorderRadius.circular(BioSenseRadius.full))),
-          const SizedBox(height: BioSenseSpacing.lg),
-          Text(
-            isEs ? 'Estado Subjetivo Actual' : 'Current Subjective Status',
-            style: BioSenseText.title),
-          const SizedBox(height: 4),
-          Text(
-            isEs
-              ? 'Su respuesta calibra el modelo adaptativo.'
-              : 'Your response calibrates the adaptive model.',
-            style: BioSenseText.caption, textAlign: TextAlign.center),
-          const SizedBox(height: BioSenseSpacing.xl),
-          ...{
-            isEs ? 'Estado fisiológico óptimo'   : 'Optimal physiological state': 0.0,
-            isEs ? 'Parámetros dentro de rango'  : 'Within parameters': 0.05,
-            isEs ? 'Fatiga leve detectada'        : 'Mild fatigue detected': 0.10,
-            isEs ? 'Fatiga moderada'              : 'Moderate fatigue': 0.15,
-            isEs ? 'Malestar significativo'       : 'Significant discomfort': 0.20,
-          }.entries.map((e) => Padding(
-            padding: const EdgeInsets.only(bottom: BioSenseSpacing.sm),
-            child: SizedBox(width: double.infinity, height: 44,
-              child: OutlinedButton(
-                onPressed: () {
-                  app.setMockPerturbation(e.value);
+      builder: (_) {
+        final options = [
+          _SubjectiveOption(
+            isEs ? 'Estado fisiológico óptimo'  : 'Optimal physiological state',
+            0.0, BioSenseColor.accent,   Icons.sentiment_very_satisfied_outlined),
+          _SubjectiveOption(
+            isEs ? 'Parámetros dentro de rango' : 'Within parameters',
+            0.05, BioSenseColor.accent,  Icons.sentiment_satisfied_outlined),
+          _SubjectiveOption(
+            isEs ? 'Fatiga leve detectada'       : 'Mild fatigue detected',
+            0.10, BioSenseColor.warning, Icons.sentiment_neutral_outlined),
+          _SubjectiveOption(
+            isEs ? 'Fatiga moderada'             : 'Moderate fatigue',
+            0.15, BioSenseColor.warning, Icons.sentiment_dissatisfied_outlined),
+          _SubjectiveOption(
+            isEs ? 'Malestar significativo'      : 'Significant discomfort',
+            0.20, BioSenseColor.alert,   Icons.sentiment_very_dissatisfied_outlined),
+        ];
+        return Container(
+          decoration: const BoxDecoration(
+            color: BioSenseColor.surface,
+            borderRadius: BorderRadius.vertical(
+              top: Radius.circular(BioSenseRadius.lg))),
+          padding: const EdgeInsets.all(BioSenseSpacing.xl),
+          child: Column(mainAxisSize: MainAxisSize.min, children: [
+            Container(width: 36, height: 3,
+              decoration: BoxDecoration(
+                color: BioSenseColor.border,
+                borderRadius: BorderRadius.circular(BioSenseRadius.full))),
+            const SizedBox(height: BioSenseSpacing.lg),
+            Text(
+              isEs ? 'Estado Subjetivo Actual' : 'Current Subjective Status',
+              style: BioSenseText.title),
+            const SizedBox(height: 4),
+            Text(
+              isEs
+                ? 'Su respuesta calibra el modelo adaptativo.'
+                : 'Your response calibrates the adaptive model.',
+              style: BioSenseText.caption, textAlign: TextAlign.center),
+            const SizedBox(height: BioSenseSpacing.xl),
+            ...options.map((opt) => Padding(
+              padding: const EdgeInsets.only(bottom: BioSenseSpacing.sm),
+              child: GestureDetector(
+                onTap: () {
+                  app.setMockPerturbation(opt.value);
                   Navigator.pop(context);
                 },
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: BioSenseColor.primary,
-                  side: const BorderSide(color: BioSenseColor.border),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(BioSenseRadius.sm))),
-                child: Text(e.key,
-                  style: BioSenseText.body.copyWith(
-                    color: BioSenseColor.primary)),
+                child: Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: BioSenseSpacing.lg,
+                    vertical: BioSenseSpacing.md),
+                  decoration: BoxDecoration(
+                    color: opt.color.withOpacity(0.08),
+                    borderRadius: BorderRadius.circular(BioSenseRadius.md),
+                    border: Border.all(color: opt.color.withOpacity(0.30))),
+                  child: Row(children: [
+                    Icon(opt.icon, color: opt.color, size: 22),
+                    const SizedBox(width: BioSenseSpacing.md),
+                    Text(opt.label,
+                      style: BioSenseText.subtitle.copyWith(color: opt.color)),
+                  ]),
+                ),
               ),
-            ),
-          )),
-          const SizedBox(height: BioSenseSpacing.md),
-        ]),
-      ),
+            )),
+            const SizedBox(height: BioSenseSpacing.md),
+          ]),
+        );
+      },
     );
   }
+}
+
+
+class _SubjectiveOption {
+  final String label;
+  final double value;
+  final Color color;
+  final IconData icon;
+  const _SubjectiveOption(this.label, this.value, this.color, this.icon);
 }
 
 // Fondo hexagonal premium
