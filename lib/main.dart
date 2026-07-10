@@ -107,10 +107,17 @@ class _SplashScreenState extends State<SplashScreen>
     _update(1.0, 'System ready.');
     await Future.delayed(const Duration(milliseconds: 300));
     if (mounted) {
-      Provider.of<AppStateProvider>(context, listen: false).connectMockMode();
+      final prefs = await SharedPreferences.getInstance();
+      final onboardingDone = prefs.getBool('onboarding_done') ?? false;
+      final savedName = prefs.getString('user_name') ?? '';
+      final app = Provider.of<AppStateProvider>(context, listen: false);
+      app.connectMockMode();
+      if (savedName.isNotEmpty) app.setUserName(savedName);
       Navigator.of(context).pushReplacement(
         PageRouteBuilder(
-          pageBuilder: (_, __, ___) => const MainNavigationScreen(),
+          pageBuilder: (_, __, ___) => onboardingDone
+            ? const MainNavigationScreen()
+            : const OnboardingScreen(),
           transitionsBuilder: (_, anim, __, child) =>
               FadeTransition(opacity: anim, child: child),
           transitionDuration: const Duration(milliseconds: 500),
