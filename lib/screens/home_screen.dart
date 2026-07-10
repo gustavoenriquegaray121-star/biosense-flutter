@@ -5,6 +5,7 @@
 
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../providers/app_state_provider.dart';
 import '../widgets/quick_log_bar.dart';
@@ -79,6 +80,7 @@ class _HomeScreenState extends State<HomeScreen>
     _pulseCtrl = AnimationController(
       vsync: this, duration: const Duration(milliseconds: 1800))
       ..repeat(reverse: true);
+    // La velocidad del pulse depende del estado
     _pulseAnim = Tween<double>(begin: 1.0, end: 0.15)
         .animate(CurvedAnimation(parent: _pulseCtrl, curve: Curves.easeInOut));
 
@@ -677,6 +679,7 @@ class _HelpButton extends StatelessWidget {
           const SizedBox(width: 8),
           ElevatedButton(
             onPressed: () {
+              HapticFeedback.heavyImpact();
               Navigator.pop(context);
               ScaffoldMessenger.of(context).showSnackBar(SnackBar(
                 content: Text(isEs
@@ -694,6 +697,82 @@ class _HelpButton extends StatelessWidget {
       ),
     );
   }
+}
+
+
+// ── Punto pulsante dinámico según estado
+class _PulseDot extends StatefulWidget {
+  final Color color;
+  final String statusKey;
+  const _PulseDot({required this.color, required this.statusKey});
+
+  @override
+  State<_PulseDot> createState() => _PulseDotState();
+}
+
+class _PulseDotState extends State<_PulseDot>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _ctrl;
+  late Animation<double> _anim;
+
+  Duration get _duration {
+    switch (widget.statusKey) {
+      case 'fatigue':  return const Duration(milliseconds: 1500);
+      case 'alert':    return const Duration(milliseconds: 1000);
+      case 'danger':
+      case 'critical': return const Duration(milliseconds: 500);
+      default:         return const Duration(milliseconds: 2500);
+    }
+  }
+
+  double get _minOpacity {
+    switch (widget.statusKey) {
+      case 'fatigue':  return 0.25;
+      case 'alert':    return 0.15;
+      case 'danger':
+      case 'critical': return 0.10;
+      default:         return 0.20;
+    }
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(vsync: this, duration: _duration)
+      ..repeat(reverse: true);
+    _anim = Tween<double>(begin: 1.0, end: _minOpacity)
+        .animate(CurvedAnimation(parent: _ctrl, curve: Curves.easeInOut));
+  }
+
+  @override
+  void didUpdateWidget(_PulseDot old) {
+    super.didUpdateWidget(old);
+    if (old.statusKey != widget.statusKey) {
+      _ctrl.duration = _duration;
+      _ctrl.repeat(reverse: true);
+      _anim = Tween<double>(begin: 1.0, end: _minOpacity)
+          .animate(CurvedAnimation(parent: _ctrl, curve: Curves.easeInOut));
+    }
+  }
+
+  @override
+  void dispose() { _ctrl.dispose(); super.dispose(); }
+
+  @override
+  Widget build(BuildContext context) => AnimatedBuilder(
+    animation: _anim,
+    builder: (_, __) => Opacity(
+      opacity: _anim.value,
+      child: Container(
+        width: 14, height: 14,
+        decoration: BoxDecoration(
+          color: widget.color, shape: BoxShape.circle,
+          boxShadow: [
+            BoxShadow(color: widget.color.withOpacity(0.6),
+              blurRadius: 16, spreadRadius: 4),
+            BoxShadow(color: widget.color.withOpacity(0.3),
+              blurRadius: 6, spreadRadius: 1),
+          ]))));
 }
 
 class _SubjectiveOption {
