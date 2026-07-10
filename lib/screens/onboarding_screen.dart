@@ -680,7 +680,7 @@ class _ActivityTile extends StatelessWidget {
           Text(label, style: TextStyle(
             fontFamily: 'Inter', fontSize: 14,
             fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
-            color: selected ? const Color(0xFF10AC84) : Colors.white80)),
+            color: selected ? const Color(0xFF10AC84) : Colors.white.withOpacity(0.80))),
           const SizedBox(height: 2),
           Text(desc, style: const TextStyle(
             fontFamily: 'Inter', fontSize: 11, color: Colors.white38)),
