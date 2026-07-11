@@ -774,6 +774,5 @@ class _PermissionRowState extends State<_PermissionRow> {
             : Icon(Icons.chevron_right_outlined,
                 color: color.withOpacity(0.5), size: 18),
         ]));
-    );
   }
-}
+      }
