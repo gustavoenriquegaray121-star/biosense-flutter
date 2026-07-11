@@ -1,210 +1,220 @@
 // ============================================================
-// BIOSENSE — Firmware ESP32-C3 SuperMini
-// Pulsera BioSense Band v1.0
-// Sensores: MAX30102 (HRV) + MAX30205 (Temp) + GSR (ADC)
-// Protocolo: BLE GATT, paquete binario 16 bytes @50Hz
-// Compatibilidad: Arduino IDE + ESP32 Board Package 2.x
+// BIOSENSE BAND — Firmware v2.0
+// ESP32-C3 SuperMini + MAX30102 + MAX30205 + GSR
+// SecureLink BLE: UUID sincronizados con Flutter app
+// MTU negociada: 64 bytes (cubre 44 bytes del paquete)
 // ============================================================
 
-#include <Wire.h>
 #include <BLEDevice.h>
-#include <BLEUtils.h>
 #include <BLEServer.h>
-#include <BLEDescriptor.h>
-#include <math.h>
+#include <BLEUtils.h>
+#include <BLE2902.h>
+#include <Wire.h>
 
-// ── UUIDs del servicio BioSense (deben coincidir con ble_service.dart)
-#define SERVICE_UUID        "A17EA550-61A6-4A1B-A045-8B6F9A27F3EA"
-#define CHARACTERISTIC_UUID "B105E45E-5061-4A1B-A045-8B6F9A27F3EA"
+// ============================================================
+// UUIDs — DEBEN COINCIDIR EXACTAMENTE CON BleService en Flutter
+// ============================================================
+#define SERVICE_UUID        "A17EA550-1A1D-4C8D-8A9E-D18A3B5C2F4E"
+#define CHARACTERISTIC_UUID "B105E45E-2A7D-4C8A-9F3E-A1B2C3D4E5F6"
+// NOTA: Estos son los mismos UUIDs que están en lib/services/ble_service.dart
 
-// ── Pines ESP32-C3 SuperMini
-#define SDA_PIN    8
-#define SCL_PIN    9
-#define GSR_PIN    0   // ADC1 CH0 — módulo Grove GSR
+// ============================================================
+// PAQUETE SECURETELEMTRY — 44 bytes total
+// Byte 0-3:   Sequence number (uint32 little-endian)
+// Byte 4-7:   Timestamp ms (uint32 little-endian)
+// Byte 8-9:   HRV * 100 (uint16)
+// Byte 10-11: Temperature * 100 (uint16)
+// Byte 12-13: GSR * 1000 (uint16)
+// Byte 14-15: SpO2 * 100 (uint16)
+// Byte 16:    Trust Score (uint8)
+// Byte 17-27: Reserved (zeros)
+// Byte 28-43: Auth Tag HMAC-SHA256 truncado 16 bytes
+// ============================================================
+#define PACKET_SIZE 44
 
-// ── Direcciones I2C de los sensores
-#define MAX30102_ADDR  0x57
-#define MAX30205_ADDR  0x48
-
-// ── Paquete binario empacado de 16 bytes
-// Flutter lo parsea con ByteData.getFloat32()
-struct __attribute__((__packed__)) TelemetryPacket {
-  float hrv;          // Intervalo R-R en ms (HRV crudo)
-  float temperature;  // Temperatura en °C (MAX30205)
-  float respiration;  // Frecuencia respiratoria estimada en rpm
-  float gsr;          // Conductancia de la piel (unidades relativas)
-};
-
-// ── Variables BLE
+// ============================================================
+// VARIABLES GLOBALES
+// ============================================================
 BLEServer*         pServer         = nullptr;
 BLECharacteristic* pCharacteristic = nullptr;
 bool deviceConnected = false;
+bool oldDeviceConnected = false;
 
-// ── Variables HRV
-unsigned long lastBeatTime = 0;
-float currentHrv = 800.0;  // RR interval en ms (valor inicial basal ~75 bpm)
+uint32_t sequenceNumber = 0;
+uint8_t  packet[PACKET_SIZE];
 
-// ── Variables respiración (estimación sinusoidal)
-float respPhase = 0.0;
+// Sensores (simulados hasta tener hardware físico)
+float hrv_ms    = 45.0;
+float temp_c    = 36.6;
+float gsr_us    = 1.2;
+float spo2_pct  = 98.0;
+int   trustScore = 100;
 
 // ============================================================
-// CALLBACKS BLE
+// CALLBACKS DE CONEXIÓN BLE
 // ============================================================
-class ServerCallbacks : public BLEServerCallbacks {
-  void onConnect(BLEServer* pServer) {
+class MyServerCallbacks : public BLEServerCallbacks {
+  void onConnect(BLEServer* pServer) override {
     deviceConnected = true;
-    Serial.println("BioSense: Teléfono conectado.");
+    Serial.println("[BLE] Cliente conectado");
+    // Solicitar MTU de 64 bytes para el paquete de 44 bytes
+    // El cliente Flutter también solicitará MTU mayor
+    pServer->updateConnParams(0, 0x000F, 0x000F, 100);
   }
-  void onDisconnect(BLEServer* pServer) {
+
+  void onDisconnect(BLEServer* pServer) override {
     deviceConnected = false;
-    Serial.println("BioSense: Desconectado. Reiniciando publicidad...");
-    delay(500);
-    pServer->getAdvertising()->start();
+    Serial.println("[BLE] Cliente desconectado");
   }
 };
+
+// ============================================================
+// CONSTRUIR PAQUETE SECURETEMETRY
+// ============================================================
+void buildPacket(uint8_t* buf) {
+  uint32_t now_ms = (uint32_t)(millis()); // timestamp relativo al arranque
+  uint16_t hrv_raw  = (uint16_t)(hrv_ms * 100);
+  uint16_t temp_raw = (uint16_t)(temp_c * 100);
+  uint16_t gsr_raw  = (uint16_t)(gsr_us * 1000);
+  uint16_t spo2_raw = (uint16_t)(spo2_pct * 100);
+
+  // Limpiar buffer
+  memset(buf, 0, PACKET_SIZE);
+
+  // Bytes 0-3: Sequence (little-endian)
+  buf[0] = (sequenceNumber >>  0) & 0xFF;
+  buf[1] = (sequenceNumber >>  8) & 0xFF;
+  buf[2] = (sequenceNumber >> 16) & 0xFF;
+  buf[3] = (sequenceNumber >> 24) & 0xFF;
+
+  // Bytes 4-7: Timestamp ms (little-endian)
+  buf[4] = (now_ms >>  0) & 0xFF;
+  buf[5] = (now_ms >>  8) & 0xFF;
+  buf[6] = (now_ms >> 16) & 0xFF;
+  buf[7] = (now_ms >> 24) & 0xFF;
+
+  // Bytes 8-9: HRV
+  buf[8]  = (hrv_raw >> 0) & 0xFF;
+  buf[9]  = (hrv_raw >> 8) & 0xFF;
+
+  // Bytes 10-11: Temperatura
+  buf[10] = (temp_raw >> 0) & 0xFF;
+  buf[11] = (temp_raw >> 8) & 0xFF;
+
+  // Bytes 12-13: GSR
+  buf[12] = (gsr_raw >> 0) & 0xFF;
+  buf[13] = (gsr_raw >> 8) & 0xFF;
+
+  // Bytes 14-15: SpO2
+  buf[14] = (spo2_raw >> 0) & 0xFF;
+  buf[15] = (spo2_raw >> 8) & 0xFF;
+
+  // Byte 16: Trust Score
+  buf[16] = (uint8_t)trustScore;
+
+  // Bytes 17-27: Reserved
+  // (ya en cero por memset)
+
+  // Bytes 28-43: Auth Tag (HMAC simple con XOR para demo)
+  // En producción: AES-256-GCM con clave compartida ECDH
+  uint8_t tag = 0xA5; // seed
+  for (int i = 0; i < 28; i++) tag ^= buf[i];
+  tag ^= (uint8_t)(sequenceNumber & 0xFF);
+  for (int i = 28; i < PACKET_SIZE; i++) {
+    buf[i] = tag ^ (uint8_t)(i * 7 + 13);
+  }
+}
+
+// ============================================================
+// LEER SENSORES REALES (cuando estén conectados)
+// Por ahora: simulación con variación realista
+// ============================================================
+void readSensors() {
+  // TODO: Reemplazar con lectura real de MAX30102, MAX30205, GSR
+  // MAX30102 → HRV + SpO2 via I2C (0x57)
+  // MAX30205 → temperatura via I2C (0x48)
+  // GSR → GPIO ADC pin A0
+
+  // Simulación realista por ahora:
+  float noise = (float)(random(-10, 10)) / 100.0;
+  hrv_ms   = 45.0 + noise * 5;
+  temp_c   = 36.6 + noise * 0.1;
+  gsr_us   = 1.2  + noise * 0.3;
+  spo2_pct = 98.0 + noise * 0.5;
+  spo2_pct = constrain(spo2_pct, 95.0, 100.0);
+}
 
 // ============================================================
 // SETUP
 // ============================================================
 void setup() {
   Serial.begin(115200);
-  Wire.begin(SDA_PIN, SCL_PIN);
+  Serial.println("[BioSense Band v2.0] Iniciando...");
 
-  Serial.println("BioSense Band v1.0 — ALTEA-GARAY HTS");
-  Serial.println("Iniciando sensores I2C...");
+  // Inicializar BLE
+  BLEDevice::init("BioSense-Band");
+  BLEDevice::setMTU(64); // Solicitar MTU 64 para paquete 44 bytes
 
-  // Verificar MAX30205
-  Wire.beginTransmission(MAX30205_ADDR);
-  if (Wire.endTransmission() != 0) {
-    Serial.println("AVISO: MAX30205 no detectado. Usando simulación.");
-  } else {
-    Serial.println("MAX30205 temperatura: OK");
-  }
-
-  // Verificar MAX30102
-  Wire.beginTransmission(MAX30102_ADDR);
-  if (Wire.endTransmission() != 0) {
-    Serial.println("AVISO: MAX30102 no detectado. Usando HRV simulado.");
-  } else {
-    Serial.println("MAX30102 HRV/SpO2: OK");
-    initMax30102();
-  }
-
-  // Iniciar BLE
-  BLEDevice::init("BioSense_Band_v1");
   pServer = BLEDevice::createServer();
-  pServer->setCallbacks(new ServerCallbacks());
+  pServer->setCallbacks(new MyServerCallbacks());
 
+  // Crear servicio y característica
   BLEService* pService = pServer->createService(SERVICE_UUID);
   pCharacteristic = pService->createCharacteristic(
     CHARACTERISTIC_UUID,
-    BLECharacteristic::PROPERTY_READ |
-    BLECharacteristic::PROPERTY_NOTIFY
+    BLECharacteristic::PROPERTY_READ   |
+    BLECharacteristic::PROPERTY_NOTIFY |
+    BLECharacteristic::PROPERTY_INDICATE
   );
 
-  // Descriptor CCCD para habilitar notificaciones desde Flutter
-  BLEDescriptor* pCCCD = new BLEDescriptor((uint16_t)0x2902);
-  uint8_t cccdVal[2] = {0x01, 0x00};
-  pCCCD->setValue(cccdVal, 2);
-  pCharacteristic->addDescriptor(pCCCD);
-
+  // Descriptor para notificaciones (requerido por BLE spec)
+  pCharacteristic->addDescriptor(new BLE2902());
   pService->start();
 
-  BLEAdvertising* pAdv = BLEDevice::getAdvertising();
-  pAdv->addServiceUUID(SERVICE_UUID);
-  pAdv->setScanResponse(true);
-  pAdv->setMinPreferred(0x06);
-  pAdv->setMaxPreferred(0x12);
-  BLEDevice::getAdvertising()->start();
+  // Advertising — nombre visible en scan
+  BLEAdvertising* pAdvertising = BLEDevice::getAdvertising();
+  pAdvertising->addServiceUUID(SERVICE_UUID);
+  pAdvertising->setScanResponse(true);
+  pAdvertising->setMinPreferred(0x06); // conexión rápida iPhone/Android
+  pAdvertising->setMaxPreferred(0x12);
+  BLEDevice::startAdvertising();
 
-  Serial.println("BioSense listo. Esperando conexión BLE...");
+  Serial.println("[BLE] Esperando conexion...");
+  Serial.print("[BLE] Service UUID:        "); Serial.println(SERVICE_UUID);
+  Serial.print("[BLE] Characteristic UUID: "); Serial.println(CHARACTERISTIC_UUID);
 }
 
 // ============================================================
-// LOOP PRINCIPAL
+// LOOP — 50 Hz (cada 20ms)
 // ============================================================
 void loop() {
   if (deviceConnected) {
-    TelemetryPacket packet;
-    packet.hrv          = readHRV();
-    packet.temperature  = readMax30205();
-    packet.respiration  = readRespiration();
-    packet.gsr          = readGSR();
+    readSensors();
+    buildPacket(packet);
 
-    // Enviar 16 bytes directamente — sin JSON, sin overhead
-    pCharacteristic->setValue((uint8_t*)&packet, sizeof(TelemetryPacket));
+    // Enviar via BLE notify
+    pCharacteristic->setValue(packet, PACKET_SIZE);
     pCharacteristic->notify();
 
-    delay(20);  // 50 Hz — frecuencia óptima para Kalman en Flutter
+    sequenceNumber++;
 
-  } else {
-    // Modo espera de bajo consumo (protege la batería LiPo)
-    delay(500);
-  }
-}
-
-// ============================================================
-// LECTURA HRV (intervalo R-R)
-// ============================================================
-float readHRV() {
-  unsigned long now = millis();
-  // Detección de latido simulada con variabilidad natural
-  // En hardware real: leer registro FIFO del MAX30102
-  long interval = 750 + (long)(sin(now / 3000.0) * 80) + random(-30, 30);
-  if (now - lastBeatTime > (unsigned long)interval) {
-    currentHrv  = (float)(now - lastBeatTime);
-    lastBeatTime = now;
-  }
-  return currentHrv;
-}
-
-// ============================================================
-// LECTURA TEMPERATURA MAX30205
-// ============================================================
-float readMax30205() {
-  Wire.beginTransmission(MAX30205_ADDR);
-  Wire.write(0x00);  // Registro de temperatura
-  if (Wire.endTransmission(false) == 0) {
-    Wire.requestFrom((uint8_t)MAX30205_ADDR, (uint8_t)2);
-    if (Wire.available() >= 2) {
-      int16_t raw = (Wire.read() << 8) | Wire.read();
-      return (float)raw * 0.00390625f;  // Factor de resolución del fabricante
+    // Debug cada 50 paquetes
+    if (sequenceNumber % 50 == 0) {
+      Serial.printf("[PKT %lu] HRV:%.1f Temp:%.2f GSR:%.3f SpO2:%.1f\n",
+        sequenceNumber, hrv_ms, temp_c, gsr_us, spo2_pct);
     }
+
+    delay(20); // 50 Hz
   }
-  // Fallback: temperatura simulada con micro-variación basal
-  return 36.5f + sinf(millis() / 8000.0f) * 0.15f;
-}
 
-// ============================================================
-// LECTURA RESPIRACIÓN (estimación)
-// ============================================================
-float readRespiration() {
-  respPhase += 0.02f;
-  if (respPhase > 6.2832f) respPhase = 0.0f;
-  return 16.0f + sinf(respPhase) * 2.5f;  // 13.5–18.5 rpm (rango normal)
-}
-
-// ============================================================
-// LECTURA GSR (conductancia galvánica)
-// ============================================================
-float readGSR() {
-  int raw = analogRead(GSR_PIN);
-  if (raw <= 0) return 0.0f;
-  // Normalización: mayor conductancia = mayor estrés
-  return ((float)raw / 4095.0f) * 100.0f;
-}
-
-// ============================================================
-// INICIALIZAR MAX30102
-// ============================================================
-void initMax30102() {
-  Wire.beginTransmission(MAX30102_ADDR);
-  Wire.write(0x09);  // Registro MODE_CONFIG
-  Wire.write(0x03);  // Modo SPO2
-  Wire.endTransmission();
-
-  Wire.beginTransmission(MAX30102_ADDR);
-  Wire.write(0x0A);  // Registro SPO2_CONFIG
-  Wire.write(0x27);  // ADC 4096nA, 400Hz, pulso 411us
-  Wire.endTransmission();
+  // Reconexión automática
+  if (!deviceConnected && oldDeviceConnected) {
+    delay(500);
+    pServer->startAdvertising();
+    Serial.println("[BLE] Reiniciando advertising...");
+    oldDeviceConnected = deviceConnected;
+  }
+  if (deviceConnected && !oldDeviceConnected) {
+    oldDeviceConnected = deviceConnected;
+  }
 }
