@@ -45,7 +45,6 @@ class BleService {
 
   // Motor de autenticación SecureLink
   final BioSenseAuthEngine _authEngine = BioSenseAuthEngine();
-  final MockBandPacketGenerator _generator = MockBandPacketGenerator();
 
   // Buffer para fragmentación
   final List<int> _fragmentBuffer = [];
@@ -57,12 +56,9 @@ class BleService {
   final Random _rng = Random();
 
   // Streams públicos
-  final _statusCtrl =
-      StreamController<BleConnectionStatus>.broadcast();
-  final _rawMetricsCtrl =
-      StreamController<Map<String, double>>.broadcast();
-  final _validationCtrl =
-      StreamController<ValidationResult>.broadcast();
+  final _statusCtrl = StreamController<BleConnectionStatus>.broadcast();
+  final _rawMetricsCtrl = StreamController<Map<String, double>>.broadcast();
+  final _validationCtrl = StreamController<ValidationResult>.broadcast();
 
   // ── Streams expuestos
   Stream<BleConnectionStatus> get statusStream  => _statusCtrl.stream;
@@ -80,14 +76,14 @@ class BleService {
     _mockTimer?.cancel();
     _setState(BleConnectionStatus.ready);
 
-    _mockTimer = Timer.periodic(const Duration(milliseconds: 200), (_) {
-      final noise = (_rng.nextDouble() - 0.5) * 0.04;
-      _rawMetricsCtrl.add({
-        'hrv':  1.0 + noise - _mockPerturbation,
-        'temp': 1.0 + noise * 0.5 + _mockPerturbation * 0.3,
-        'resp': 1.0 + noise * 0.3 + _mockPerturbation * 0.2,
-        'gsr':  1.0 + noise * 0.8 + _mockPerturbation * 0.5,
-      });
+    _mockTimer = Timer.periodic(const Duration(milliseconds: 200), (_) {  
+      final noise = (_rng.nextDouble() - 0.5) * 0.04;  
+      _rawMetricsCtrl.add({  
+        'hrv':  1.0 + noise - _mockPerturbation,  
+        'temp': 1.0 + noise * 0.5 + _mockPerturbation * 0.3,  
+        'resp': 1.0 + noise * 0.3 + _mockPerturbation * 0.2,  
+        'gsr':  1.0 + noise * 0.8 + _mockPerturbation * 0.5,  
+      });  
     });
   }
 
@@ -101,24 +97,24 @@ class BleService {
     if (_mockMode) { startMockMode(); return; }
     _setState(BleConnectionStatus.scanning);
 
-    try {
-      await FlutterBluePlus.startScan(
-        withServices: [Guid(kServiceUUID)],
-        timeout: const Duration(seconds: 10));
+    try {  
+      await FlutterBluePlus.startScan(  
+        withServices: [Guid(kServiceUUID)],  
+        timeout: const Duration(seconds: 10));  
 
-      FlutterBluePlus.scanResults.listen((results) {
-        for (final r in results) {
-          final uuids = r.advertisementData.serviceUuids
-              .map((g) => g.toString().toUpperCase()).toList();
-          if (uuids.contains(kServiceUUID.toUpperCase())) {
-            FlutterBluePlus.stopScan();
-            _connect(r.device);
-            break;
-          }
-        }
-      });
-    } catch (e) {
-      _setState(BleConnectionStatus.error);
+      FlutterBluePlus.scanResults.listen((results) {  
+        for (final r in results) {  
+          final uuids = r.advertisementData.serviceUuids  
+              .map((g) => g.toString().toUpperCase()).toList();  
+          if (uuids.contains(kServiceUUID.toUpperCase())) {  
+            FlutterBluePlus.stopScan();  
+            _connect(r.device);  
+            break;  
+          }  
+        }  
+      });  
+    } catch (e) {  
+      _setState(BleConnectionStatus.error);  
     }
   }
 
@@ -126,43 +122,43 @@ class BleService {
     _setState(BleConnectionStatus.connecting);
     _device = device;
 
-    try {
-      await device.connect(timeout: const Duration(seconds: 10));
-      _setState(BleConnectionStatus.connected);
+    try {  
+      await device.connect(timeout: const Duration(seconds: 10));  
+      _setState(BleConnectionStatus.connected);  
 
-      device.connectionState.listen((state) {
-        if (state == BluetoothConnectionState.disconnected) {
-          _setState(BleConnectionStatus.signalLost);
-          _fragmentBuffer.clear();
-          _authEngine.resetSession();
-        }
-      });
+      device.connectionState.listen((state) {  
+        if (state == BluetoothConnectionState.disconnected) {  
+          _setState(BleConnectionStatus.signalLost);  
+          _fragmentBuffer.clear();  
+          _authEngine.resetSession();  
+        }  
+      });  
 
-      // Negociar MTU
-      _setState(BleConnectionStatus.mtuNegotiating);
-      try {
-        _negotiatedMtu = await device.requestMtu(kMtuRequested);
-      } catch (_) {
-        _negotiatedMtu = 23; // fallback con fragmentación
-      }
+      // Negociar MTU  
+      _setState(BleConnectionStatus.mtuNegotiating);  
+      try {  
+        _negotiatedMtu = await device.requestMtu(kMtuRequested);  
+      } catch (_) {  
+        _negotiatedMtu = 23; // fallback con fragmentación  
+      }  
 
-      // Descubrir servicios
-      final services = await device.discoverServices();
-      for (final service in services) {
-        if (service.uuid == Guid(kServiceUUID)) {
-          for (final char in service.characteristics) {
-            if (char.uuid == Guid(kCharacteristicUUID)) {
-              await char.setNotifyValue(true);
-              char.onValueReceived.listen(_handleRawBytes);
-              _setState(BleConnectionStatus.ready);
-              return;
-            }
-          }
-        }
-      }
-      _setState(BleConnectionStatus.error);
-    } catch (e) {
-      _setState(BleConnectionStatus.error);
+      // Descubrir servicios  
+      final services = await device.discoverServices();  
+      for (final service in services) {  
+        if (service.uuid == Guid(kServiceUUID)) {  
+          for (final char in service.characteristics) {  
+            if (char.uuid == Guid(kCharacteristicUUID)) {  
+              await char.setNotifyValue(true);  
+              char.onValueReceived.listen(_handleRawBytes);  
+              _setState(BleConnectionStatus.ready);  
+              return;  
+            }  
+          }  
+        }  
+      }  
+      _setState(BleConnectionStatus.error);  
+    } catch (e) {  
+      _setState(BleConnectionStatus.error);  
     }
   }
 
@@ -187,17 +183,17 @@ class BleService {
     final packet = SecureTelemetryPacket.fromBytes(bytes);
     if (packet == null) return;
 
-    final result = _authEngine.validatePacket(packet);
-    _validationCtrl.add(result);
+    final result = _authEngine.validatePacket(packet);  
+    _validationCtrl.add(result);  
 
-    if (result.isValid) {
-      // Normalizar métricas para el motor DHSI
-      _rawMetricsCtrl.add({
-        'hrv':  _normalize(packet.hrv,  20, 100),
-        'temp': _normalize(packet.temperature, 35.5, 38.5),
-        'resp': _normalize(packet.spO2, 95, 100),
-        'gsr':  _normalize(packet.gsr,  0.1, 10.0),
-      });
+    if (result.isValid) {  
+      // Normalizar métricas para el motor DHSI  
+      _rawMetricsCtrl.add({  
+        'hrv':  _normalize(packet.hrv,  20, 100),  
+        'temp': _normalize(packet.temperature, 35.5, 38.5),  
+        'resp': _normalize(packet.spO2, 95, 100),  
+        'gsr':  _normalize(packet.gsr,  0.1, 10.0),  
+      });  
     }
   }
 
