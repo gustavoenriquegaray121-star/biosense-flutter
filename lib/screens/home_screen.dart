@@ -5,8 +5,10 @@
 
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../providers/app_state_provider.dart';
 import '../widgets/quick_log_bar.dart';
 import '../design/biosense_theme.dart';
@@ -652,6 +654,52 @@ class _HelpButton extends StatelessWidget {
     ),
   );
 
+  Future<void> _sendEmergencySms(BuildContext context, bool isEs) async {
+    final prefs = await SharedPreferences.getInstance();
+    final phone = prefs.getString('emergency_contact_phone') ?? '';
+    final name  = prefs.getString('emergency_contact_name') ?? '';
+
+    if (phone.isEmpty) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(isEs
+            ? 'Agrega un contacto de emergencia en Configuración'
+            : 'Add an emergency contact in Settings'),
+          backgroundColor: BioSenseColor.warning,
+          behavior: SnackBarBehavior.floating));
+      }
+      return;
+    }
+
+    final msg = isEs
+      ? 'BIOSENSE ALERTA: ${context.read<AppStateProvider>().userName} '
+        'necesita ayuda. Estado fisiológico: ALERTA. '
+        'Enviado desde BioSense | ALTEA-GARAY HTS'
+      : 'BIOSENSE ALERT: ${context.read<AppStateProvider>().userName} '
+        'needs help. Physiological status: ALERT. '
+        'Sent from BioSense | ALTEA-GARAY HTS';
+
+    final uri = Uri(
+      scheme: 'sms',
+      path: phone,
+      queryParameters: {'body': msg});
+
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri);
+    }
+
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(isEs
+          ? 'Mensaje de ayuda enviado a $name'
+          : 'Help message sent to $name'),
+        backgroundColor: BioSenseColor.alert,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(BioSenseRadius.sm))));
+    }
+  }
+
   void _showHelpDialog(BuildContext context) {
     final isEs = context.read<AppStateProvider>().language.name == 'es';
     showDialog(
@@ -683,17 +731,10 @@ class _HelpButton extends StatelessWidget {
             child: Text(isEs ? 'Cancelar' : 'Cancel')),
           const SizedBox(width: 8),
           ElevatedButton(
-            onPressed: () {
+            onPressed: () async {
               HapticFeedback.heavyImpact();
               Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                content: Text(isEs
-                  ? 'Alerta enviada a tu Red de Acompañamiento Seguro'
-                  : 'Alert sent to your Trusted Care Network'),
-                backgroundColor: BioSenseColor.alert,
-                behavior: SnackBarBehavior.floating,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(BioSenseRadius.sm))));
+              await _sendEmergencySms(context, isEs);
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: BioSenseColor.alert),
