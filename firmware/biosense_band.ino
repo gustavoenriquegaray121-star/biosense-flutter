@@ -1,8 +1,8 @@
 // ============================================================
-// BIOSENSE BAND — Firmware v2.0
-// ESP32-C3 SuperMini + MAX30102 + MAX30205 + GSR
-// SecureLink BLE: UUID sincronizados con Flutter app
-// MTU negociada: 64 bytes (cubre 44 bytes del paquete)
+// BIOSENSE BAND — Firmware v3.0 COMPLETO
+// ESP32-C3 SuperMini
+// Sensores: MAX30102 + MAX30205 + GSR
+// BLE SecureLink — UUIDs sincronizados con la app Flutter
 // ============================================================
 
 #include <BLEDevice.h>
@@ -11,210 +11,284 @@
 #include <BLE2902.h>
 #include <Wire.h>
 
+#include <MAX30105.h>
+#include <heartRate.h>
+
 // ============================================================
-// UUIDs — DEBEN COINCIDIR EXACTAMENTE CON BleService en Flutter
+// UUIDs (IDÉNTICOS a la app Flutter)
 // ============================================================
 #define SERVICE_UUID        "A17EA550-1A1D-4C8D-8A9E-D18A3B5C2F4E"
 #define CHARACTERISTIC_UUID "B105E45E-2A7D-4C8A-9F3E-A1B2C3D4E5F6"
-// NOTA: Estos son los mismos UUIDs que están en lib/services/ble_service.dart
+#define DEVICE_NAME         "BioSense-Band"
+#define PACKET_SIZE         44
 
 // ============================================================
-// PAQUETE SECURETELEMTRY — 44 bytes total
-// Byte 0-3:   Sequence number (uint32 little-endian)
-// Byte 4-7:   Timestamp ms (uint32 little-endian)
-// Byte 8-9:   HRV * 100 (uint16)
-// Byte 10-11: Temperature * 100 (uint16)
-// Byte 12-13: GSR * 1000 (uint16)
-// Byte 14-15: SpO2 * 100 (uint16)
-// Byte 16:    Trust Score (uint8)
-// Byte 17-27: Reserved (zeros)
-// Byte 28-43: Auth Tag HMAC-SHA256 truncado 16 bytes
+// PINES
 // ============================================================
-#define PACKET_SIZE 44
+#define PIN_GSR     3     // GPIO3 — ADC para GSR
+#define PIN_SDA     6     // GPIO6 — I2C Data
+#define PIN_SCL     7     // GPIO7 — I2C Clock
+#define PIN_LED     8     // LED interno
 
-// ============================================================
-// VARIABLES GLOBALES
-// ============================================================
+// Direcciones I2C
+#define ADDR_MAX30102  0x57
+#define ADDR_MAX30205  0x48
+
+// Objetos globales
+MAX30105 particleSensor;
+
 BLEServer*         pServer         = nullptr;
 BLECharacteristic* pCharacteristic = nullptr;
-bool deviceConnected = false;
+
+bool deviceConnected    = false;
 bool oldDeviceConnected = false;
 
 uint32_t sequenceNumber = 0;
 uint8_t  packet[PACKET_SIZE];
 
-// Sensores (simulados hasta tener hardware físico)
+// Métricas
 float hrv_ms    = 45.0;
 float temp_c    = 36.6;
 float gsr_us    = 1.2;
 float spo2_pct  = 98.0;
-int   trustScore = 100;
+
+// HRV
+const byte RATE_SIZE = 4;
+byte rates[RATE_SIZE];
+byte rateSpot = 0;
+long lastBeat = 0;
+float beatsPerMinute = 72.0;
+int   beatAvg = 72;
+
+// Estado sensores
+bool max30102_ok = false;
+bool max30205_ok = false;
 
 // ============================================================
-// CALLBACKS DE CONEXIÓN BLE
+// CALLBACKS BLE
 // ============================================================
 class MyServerCallbacks : public BLEServerCallbacks {
-  void onConnect(BLEServer* pServer) override {
-    deviceConnected = true;
-    Serial.println("[BLE] Cliente conectado");
-    // Solicitar MTU de 64 bytes para el paquete de 44 bytes
-    // El cliente Flutter también solicitará MTU mayor
-    pServer->updateConnParams(0, 0x000F, 0x000F, 100);
-  }
+    void onConnect(BLEServer* pServer) override {
+        deviceConnected = true;
+        digitalWrite(PIN_LED, HIGH);
+        Serial.println("[BLE] Dispositivo conectado");
+    }
 
-  void onDisconnect(BLEServer* pServer) override {
-    deviceConnected = false;
-    Serial.println("[BLE] Cliente desconectado");
-  }
+    void onDisconnect(BLEServer* pServer) override {
+        deviceConnected = false;
+        digitalWrite(PIN_LED, LOW);
+        Serial.println("[BLE] Dispositivo desconectado");
+    }
 };
 
 // ============================================================
-// CONSTRUIR PAQUETE SECURETEMETRY
+// INICIALIZACIÓN DE SENSORES
 // ============================================================
-void buildPacket(uint8_t* buf) {
-  uint32_t now_ms = (uint32_t)(millis()); // timestamp relativo al arranque
-  uint16_t hrv_raw  = (uint16_t)(hrv_ms * 100);
-  uint16_t temp_raw = (uint16_t)(temp_c * 100);
-  uint16_t gsr_raw  = (uint16_t)(gsr_us * 1000);
-  uint16_t spo2_raw = (uint16_t)(spo2_pct * 100);
+bool initMAX30102() {
+    if (!particleSensor.begin(Wire, I2C_SPEED_FAST)) {
+        Serial.println("[MAX30102] ERROR: Sensor no encontrado");
+        return false;
+    }
+    particleSensor.setup();
+    particleSensor.setPulseAmplitudeRed(0x0A);
+    particleSensor.setPulseAmplitudeGreen(0);
+    Serial.println("[MAX30102] Inicializado correctamente");
+    return true;
+}
 
-  // Limpiar buffer
-  memset(buf, 0, PACKET_SIZE);
+float readMAX30205() {
+    Wire.beginTransmission(ADDR_MAX30205);
+    Wire.write(0x00);
+    if (Wire.endTransmission(false) != 0) return temp_c;
 
-  // Bytes 0-3: Sequence (little-endian)
-  buf[0] = (sequenceNumber >>  0) & 0xFF;
-  buf[1] = (sequenceNumber >>  8) & 0xFF;
-  buf[2] = (sequenceNumber >> 16) & 0xFF;
-  buf[3] = (sequenceNumber >> 24) & 0xFF;
+    Wire.requestFrom(ADDR_MAX30205, 2);
+    if (Wire.available() < 2) return temp_c;
 
-  // Bytes 4-7: Timestamp ms (little-endian)
-  buf[4] = (now_ms >>  0) & 0xFF;
-  buf[5] = (now_ms >>  8) & 0xFF;
-  buf[6] = (now_ms >> 16) & 0xFF;
-  buf[7] = (now_ms >> 24) & 0xFF;
+    uint8_t msb = Wire.read();
+    uint8_t lsb = Wire.read();
 
-  // Bytes 8-9: HRV
-  buf[8]  = (hrv_raw >> 0) & 0xFF;
-  buf[9]  = (hrv_raw >> 8) & 0xFF;
+    int16_t raw = ((int16_t)msb << 8) | lsb;
+    raw >>= 7;
+    float tempC = raw * 0.5f;
 
-  // Bytes 10-11: Temperatura
-  buf[10] = (temp_raw >> 0) & 0xFF;
-  buf[11] = (temp_raw >> 8) & 0xFF;
+    if (tempC >= 35.0 && tempC <= 42.0) return tempC;
+    return temp_c;
+}
 
-  // Bytes 12-13: GSR
-  buf[12] = (gsr_raw >> 0) & 0xFF;
-  buf[13] = (gsr_raw >> 8) & 0xFF;
+float readGSR() {
+    int raw = analogRead(PIN_GSR);
+    if (raw <= 0) return gsr_us;
 
-  // Bytes 14-15: SpO2
-  buf[14] = (spo2_raw >> 0) & 0xFF;
-  buf[15] = (spo2_raw >> 8) & 0xFF;
+    float resistance = (4095.0 - raw) * 10000.0 / raw;
+    if (resistance <= 0) return gsr_us;
 
-  // Byte 16: Trust Score
-  buf[16] = (uint8_t)trustScore;
-
-  // Bytes 17-27: Reserved
-  // (ya en cero por memset)
-
-  // Bytes 28-43: Auth Tag (HMAC simple con XOR para demo)
-  // En producción: AES-256-GCM con clave compartida ECDH
-  uint8_t tag = 0xA5; // seed
-  for (int i = 0; i < 28; i++) tag ^= buf[i];
-  tag ^= (uint8_t)(sequenceNumber & 0xFF);
-  for (int i = 28; i < PACKET_SIZE; i++) {
-    buf[i] = tag ^ (uint8_t)(i * 7 + 13);
-  }
+    float conductance = 1000000.0 / resistance;
+    if (conductance >= 0.1 && conductance <= 50.0) return conductance;
+    return gsr_us;
 }
 
 // ============================================================
-// LEER SENSORES REALES (cuando estén conectados)
-// Por ahora: simulación con variación realista
+// LECTURA DE PULSO Y SpO2
 // ============================================================
-void readSensors() {
-  // TODO: Reemplazar con lectura real de MAX30102, MAX30205, GSR
-  // MAX30102 → HRV + SpO2 via I2C (0x57)
-  // MAX30205 → temperatura via I2C (0x48)
-  // GSR → GPIO ADC pin A0
+void readMAX30102() {
+    long irValue = particleSensor.getIR();
 
-  // Simulación realista por ahora:
-  float noise = (float)(random(-10, 10)) / 100.0;
-  hrv_ms   = 45.0 + noise * 5;
-  temp_c   = 36.6 + noise * 0.1;
-  gsr_us   = 1.2  + noise * 0.3;
-  spo2_pct = 98.0 + noise * 0.5;
-  spo2_pct = constrain(spo2_pct, 95.0, 100.0);
+    if (irValue < 50000) return;  // Sin dedo
+
+    if (checkForBeat(irValue)) {
+        long delta = millis() - lastBeat;
+        lastBeat = millis();
+        beatsPerMinute = 60.0 / (delta / 1000.0);
+
+        if (beatsPerMinute < 255 && beatsPerMinute > 20) {
+            rates[rateSpot++] = (byte)beatsPerMinute;
+            rateSpot %= RATE_SIZE;
+
+            beatAvg = 0;
+            for (byte x = 0; x < RATE_SIZE; x++) beatAvg += rates[x];
+            beatAvg /= RATE_SIZE;
+        }
+    }
+
+    hrv_ms = (float)beatAvg;
+
+    long redValue = particleSensor.getRed();
+    if (redValue > 0 && irValue > 0) {
+        float ratio = (float)redValue / (float)irValue;
+        spo2_pct = 104.0 - 17.0 * ratio;
+        spo2_pct = constrain(spo2_pct, 90.0, 100.0);
+    }
+}
+
+// ============================================================
+// LECTURA GENERAL
+// ============================================================
+void readAllSensors() {
+    if (max30102_ok) readMAX30102();
+    if (max30205_ok) temp_c = readMAX30205();
+    gsr_us = readGSR();
+}
+
+// ============================================================
+// CONSTRUCCIÓN DE PAQUETE
+// ============================================================
+void buildPacket(uint8_t* buf) {
+    uint32_t now_ms = millis();
+    uint16_t hrv_raw = (uint16_t)(hrv_ms * 100);
+    uint16_t tmp_raw = (uint16_t)(temp_c * 100);
+    uint16_t gsr_raw = (uint16_t)(gsr_us * 1000);
+    uint16_t spo_raw = (uint16_t)(spo2_pct * 100);
+
+    memset(buf, 0, PACKET_SIZE);
+
+    // Sequence Number
+    buf[0] = (sequenceNumber >> 0) & 0xFF;
+    buf[1] = (sequenceNumber >> 8) & 0xFF;
+    buf[2] = (sequenceNumber >> 16) & 0xFF;
+    buf[3] = (sequenceNumber >> 24) & 0xFF;
+
+    // Timestamp
+    buf[4] = (now_ms >> 0) & 0xFF;
+    buf[5] = (now_ms >> 8) & 0xFF;
+    buf[6] = (now_ms >> 16) & 0xFF;
+    buf[7] = (now_ms >> 24) & 0xFF;
+
+    // Datos
+    buf[8]  = (hrv_raw >> 0) & 0xFF;
+    buf[9]  = (hrv_raw >> 8) & 0xFF;
+    buf[10] = (tmp_raw >> 0) & 0xFF;
+    buf[11] = (tmp_raw >> 8) & 0xFF;
+    buf[12] = (gsr_raw >> 0) & 0xFF;
+    buf[13] = (gsr_raw >> 8) & 0xFF;
+    buf[14] = (spo_raw >> 0) & 0xFF;
+    buf[15] = (spo_raw >> 8) & 0xFF;
+
+    buf[16] = 100;  // Trust Score
+
+    // Tag de autenticación simple
+    uint8_t tag = 0xA5;
+    for (int i = 0; i < 28; i++) tag ^= buf[i];
+    for (int i = 28; i < PACKET_SIZE; i++) {
+        buf[i] = tag ^ (uint8_t)(i * 7 + 13);
+    }
 }
 
 // ============================================================
 // SETUP
 // ============================================================
 void setup() {
-  Serial.begin(115200);
-  Serial.println("[BioSense Band v2.0] Iniciando...");
+    Serial.begin(115200);
+    delay(1000);
 
-  // Inicializar BLE
-  BLEDevice::init("BioSense-Band");
-  BLEDevice::setMTU(64); // Solicitar MTU 64 para paquete 44 bytes
+    pinMode(PIN_LED, OUTPUT);
+    digitalWrite(PIN_LED, LOW);
 
-  pServer = BLEDevice::createServer();
-  pServer->setCallbacks(new MyServerCallbacks());
+    Wire.begin(PIN_SDA, PIN_SCL);
+    delay(100);
 
-  // Crear servicio y característica
-  BLEService* pService = pServer->createService(SERVICE_UUID);
-  pCharacteristic = pService->createCharacteristic(
-    CHARACTERISTIC_UUID,
-    BLECharacteristic::PROPERTY_READ   |
-    BLECharacteristic::PROPERTY_NOTIFY |
-    BLECharacteristic::PROPERTY_INDICATE
-  );
+    max30102_ok = initMAX30102();
+    max30205_ok = true;
 
-  // Descriptor para notificaciones (requerido por BLE spec)
-  pCharacteristic->addDescriptor(new BLE2902());
-  pService->start();
+    analogReadResolution(12);
 
-  // Advertising — nombre visible en scan
-  BLEAdvertising* pAdvertising = BLEDevice::getAdvertising();
-  pAdvertising->addServiceUUID(SERVICE_UUID);
-  pAdvertising->setScanResponse(true);
-  pAdvertising->setMinPreferred(0x06); // conexión rápida iPhone/Android
-  pAdvertising->setMaxPreferred(0x12);
-  BLEDevice::startAdvertising();
+    // Inicializar BLE
+    BLEDevice::init(DEVICE_NAME);
+    BLEDevice::setMTU(64);
 
-  Serial.println("[BLE] Esperando conexion...");
-  Serial.print("[BLE] Service UUID:        "); Serial.println(SERVICE_UUID);
-  Serial.print("[BLE] Characteristic UUID: "); Serial.println(CHARACTERISTIC_UUID);
+    pServer = BLEDevice::createServer();
+    pServer->setCallbacks(new MyServerCallbacks());
+
+    BLEService* pService = pServer->createService(SERVICE_UUID);
+    pCharacteristic = pService->createCharacteristic(
+        CHARACTERISTIC_UUID,
+        BLECharacteristic::PROPERTY_READ |
+        BLECharacteristic::PROPERTY_NOTIFY);
+
+    pCharacteristic->addDescriptor(new BLE2902());
+    pService->start();
+
+    BLEAdvertising* pAdv = BLEDevice::getAdvertising();
+    pAdv->addServiceUUID(SERVICE_UUID);
+    pAdv->setScanResponse(true);
+    BLEDevice::startAdvertising();
+
+    Serial.println("BioSense Band v3.0 iniciado");
+    Serial.println("Esperando conexión con la app...");
+
+    // Parpadeo inicial
+    for (int i = 0; i < 3; i++) {
+        digitalWrite(PIN_LED, HIGH); delay(200);
+        digitalWrite(PIN_LED, LOW);  delay(200);
+    }
 }
 
 // ============================================================
-// LOOP — 50 Hz (cada 20ms)
+// LOOP
 // ============================================================
 void loop() {
-  if (deviceConnected) {
-    readSensors();
-    buildPacket(packet);
+    if (deviceConnected) {
+        readAllSensors();
+        buildPacket(packet);
 
-    // Enviar via BLE notify
-    pCharacteristic->setValue(packet, PACKET_SIZE);
-    pCharacteristic->notify();
+        pCharacteristic->setValue(packet, PACKET_SIZE);
+        pCharacteristic->notify();
+        sequenceNumber++;
 
-    sequenceNumber++;
+        if (sequenceNumber % 100 == 0) {
+            Serial.printf("[PKT %lu] BPM:%.0f Temp:%.2f°C GSR:%.2fµS SpO2:%.1f%%\n",
+                sequenceNumber, hrv_ms, temp_c, gsr_us, spo2_pct);
+        }
 
-    // Debug cada 50 paquetes
-    if (sequenceNumber % 50 == 0) {
-      Serial.printf("[PKT %lu] HRV:%.1f Temp:%.2f GSR:%.3f SpO2:%.1f\n",
-        sequenceNumber, hrv_ms, temp_c, gsr_us, spo2_pct);
+        delay(20);  // 50 Hz
     }
 
-    delay(20); // 50 Hz
-  }
-
-  // Reconexión automática
-  if (!deviceConnected && oldDeviceConnected) {
-    delay(500);
-    pServer->startAdvertising();
-    Serial.println("[BLE] Reiniciando advertising...");
-    oldDeviceConnected = deviceConnected;
-  }
-  if (deviceConnected && !oldDeviceConnected) {
-    oldDeviceConnected = deviceConnected;
-  }
+    // Reconexión automática
+    if (!deviceConnected && oldDeviceConnected) {
+        delay(500);
+        pServer->startAdvertising();
+        oldDeviceConnected = deviceConnected;
+    }
+    if (deviceConnected && !oldDeviceConnected) {
+        oldDeviceConnected = deviceConnected;
+    }
 }
