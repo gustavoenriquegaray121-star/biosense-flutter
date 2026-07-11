@@ -5,7 +5,6 @@
 // ============================================================
 
 import 'dart:typed_data';
-import 'dart:convert';
 import 'package:crypto/crypto.dart';
 
 // ============================================================
@@ -14,7 +13,7 @@ import 'package:crypto/crypto.dart';
 // ============================================================
 class SecureTelemetryPacket {
   final int sequenceNumber;   // Contador anti-replay monotónico
-  final int timestampUs;      // Timestamp microsegundos
+  final int timestampMs;      // Timestamp milisegundos (Uint32, válido hasta 2106)
   final double hrv;           // HRV ms
   final double temperature;   // °C
   final double gsr;           // µS — Estrés Autonómico
@@ -24,7 +23,7 @@ class SecureTelemetryPacket {
 
   const SecureTelemetryPacket({
     required this.sequenceNumber,
-    required this.timestampUs,
+    required this.timestampMs,
     required this.hrv,
     required this.temperature,
     required this.gsr,
@@ -37,7 +36,7 @@ class SecureTelemetryPacket {
   Uint8List toBytes() {
     final buffer = ByteData(44);
     buffer.setUint32(0, sequenceNumber, Endian.little);
-    buffer.setUint32(4, timestampUs, Endian.little);
+    buffer.setUint32(4, timestampMs & 0xFFFFFFFF, Endian.little);
     buffer.setUint16(8,  (hrv * 100).round(), Endian.little);
     buffer.setUint16(10, (temperature * 100).round(), Endian.little);
     buffer.setUint16(12, (gsr * 1000).round(), Endian.little);
@@ -55,7 +54,7 @@ class SecureTelemetryPacket {
     final buffer = ByteData.sublistView(bytes);
     return SecureTelemetryPacket(
       sequenceNumber: buffer.getUint32(0, Endian.little),
-      timestampUs:    buffer.getUint32(4, Endian.little),
+      timestampMs:    buffer.getUint32(4, Endian.little),
       hrv:         buffer.getUint16(8,  Endian.little) / 100.0,
       temperature: buffer.getUint16(10, Endian.little) / 100.0,
       gsr:         buffer.getUint16(12, Endian.little) / 1000.0,
@@ -93,8 +92,8 @@ class BioSenseAuthEngine {
     }
 
     // 2. Timestamp: rechazar paquetes de más de 5 segundos
-    final nowUs = DateTime.now().microsecondsSinceEpoch;
-    final ageMs = (nowUs - packet.timestampUs) / 1000;
+    final nowMs = DateTime.now().millisecondsSinceEpoch;
+    final ageMs = (nowMs - packet.timestampMs).toDouble();
     if (ageMs > 5000) {
       _degradeTrust(10, 'STALE_PACKET');
       return ValidationResult.stalePacket(ageMs: ageMs);
@@ -126,7 +125,7 @@ class BioSenseAuthEngine {
   Uint8List _computeAuthTag(SecureTelemetryPacket packet) {
     final message = [
       packet.sequenceNumber,
-      packet.timestampUs,
+      packet.timestampMs & 0xFF,
       (packet.hrv * 100).round(),
       (packet.temperature * 100).round(),
       (packet.gsr * 1000).round(),
@@ -335,12 +334,12 @@ class MockBandPacketGenerator {
     double spO2 = 98.0,
   }) {
     _sequence++;
-    final now = DateTime.now().microsecondsSinceEpoch;
+    final now = DateTime.now().millisecondsSinceEpoch;
 
     // Crear paquete sin tag
     final partial = SecureTelemetryPacket(
       sequenceNumber: _sequence,
-      timestampUs: now,
+      timestampMs: now,
       hrv: hrv,
       temperature: temperature,
       gsr: gsr,
@@ -355,7 +354,7 @@ class MockBandPacketGenerator {
     // Retornar paquete con tag auténtico
     return SecureTelemetryPacket(
       sequenceNumber: _sequence,
-      timestampUs: now,
+      timestampMs: now,
       hrv: hrv,
       temperature: temperature,
       gsr: gsr,
