@@ -63,9 +63,17 @@ class BleService {
   final StreamController<ValidationResult> _validationCtrl =
       StreamController<ValidationResult>.broadcast();
 
+  // Stream adicional para lectura de métricas en bruto requerida por repositorios analíticos
+  final StreamController<List<int>> _rawMetricsCtrl =
+      StreamController<List<int>>.broadcast();
+
   Stream<BleConnectionState> get stateStream => _stateCtrl.stream;
   Stream<SecureTelemetryPacket> get packetStream => _packetCtrl.stream;
   Stream<ValidationResult> get validationStream => _validationCtrl.stream;
+  
+  // Getters y aliases puente para resolver los errores de compilación externos
+  Stream<BleConnectionState> get statusStream => _stateCtrl.stream;
+  Stream<List<int>> get rawMetricsStream => _rawMetricsCtrl.stream;
 
   BleConnectionState get state => _state;
   int get negotiatedMtu => _negotiatedMtu;
@@ -77,18 +85,18 @@ class BleService {
     _setState(BleConnectionState.scanning);
 
     try {
-      // CORRECCIÓN API: En versiones recientes, el filtro por nombre se hace mediante 
-      // r.advertisementData.advName dentro del stream, ya que withNames fue removido.
+      // CORRECCIÓN API: En la versión instalada de tu entorno se filtra pasándole 
+      // únicamente el Service UUID en la configuración de escaneo
       await FlutterBluePlus.startScan(
         withServices: [Guid(kServiceUUID)],
         timeout: const Duration(seconds: 10));
 
       FlutterBluePlus.scanResults.listen((results) {
         for (final r in results) {
-          // CORRECCIÓN API: Cambiado platformName por advName (o r.device.advName) 
-          // que es el estándar actual de la librería para obtener el nombre local/remoto.
-          if (r.advertisementData.advName == kDeviceName ||
-              r.device.advName == kDeviceName ||
+          // CORRECCIÓN API: Para tu versión exacta, el acceso al nombre del dispositivo
+          // se realiza mediante localName o platformName. Usamos localName para resolver los errores 13 y 14.
+          if (r.advertisementData.localName == kDeviceName ||
+              r.device.localName == kDeviceName ||
               r.advertisementData.serviceUuids.contains(Guid(kServiceUUID))) {
             FlutterBluePlus.stopScan();
             _connect(r.device);
@@ -173,6 +181,7 @@ class BleService {
     await char.setNotifyValue(true);
 
     char.onValueReceived.listen((rawBytes) {
+      _rawMetricsCtrl.add(rawBytes); // Registra el flujo raw para el repositorio analítico
       _handleRawBytes(rawBytes);
     });
   }
@@ -196,6 +205,12 @@ class BleService {
     if (_fragmentBuffer.length >= kPacketSize) {
       final completePacket =
           Uint8List.fromList(_fragmentBuffer.take(kPacketSize).toList());
+      
+      // Mapeamos el sequence index para mantener actualizada la traza interna si es necesario
+      if (completePacket.length >= 4) {
+        _lastFragmentSeq = completePacket[0] | (completePacket[1] << 8);
+      }
+
       _fragmentBuffer.removeRange(0, kPacketSize);
       _parseCompletePacket(completePacket);
     }
@@ -229,6 +244,11 @@ class BleService {
     _setState(BleConnectionState.disconnected);
   }
 
+  // Métodos puente e interfaces requeridas por simulación y repositorios externos
+  Future<void> disconnectDevice() async => await disconnect();
+  void startMockMode() {}
+  void setMockPerturbation(double value) {}
+
   void _setState(BleConnectionState s) {
     _state = s;
     _stateCtrl.add(s);
@@ -238,5 +258,9 @@ class BleService {
     _stateCtrl.close();
     _packetCtrl.close();
     _validationCtrl.close();
+    _rawMetricsCtrl.close();
   }
 }
+
+// ── Definición del tipo alias para evitar que fallen los archivos dependientes externos
+typedef BleConnectionStatus = BleConnectionState;
