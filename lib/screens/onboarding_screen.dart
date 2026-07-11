@@ -525,19 +525,35 @@ class _DarkInput extends StatelessWidget {
     decoration: BoxDecoration(
       color: const Color(0xFF1A2640),
       borderRadius: BorderRadius.circular(BioSenseRadius.md),
-      border: Border.all(color: Colors.white12)),
+      border: Border.all(color: Colors.white24)),
     child: TextField(
       controller: controller,
-      keyboardType: keyboardType,
-      style: const TextStyle(fontFamily: 'Inter',
-        color: Colors.white, fontSize: 15),
+      keyboardType: keyboardType ?? TextInputType.text,
+      textInputAction: TextInputAction.next,
+      keyboardAppearance: Brightness.dark,
+      cursorColor: const Color(0xFF10AC84),
+      style: const TextStyle(
+        fontFamily: 'Inter', color: Colors.white,
+        fontSize: 15, fontWeight: FontWeight.w400),
       decoration: InputDecoration(
         hintText: hint,
-        hintStyle: const TextStyle(color: Colors.white24, fontSize: 14),
+        hintStyle: const TextStyle(
+          color: Colors.white30, fontSize: 14),
         prefixIcon: Icon(icon, color: Colors.white38, size: 20),
-        border: InputBorder.none,
+        filled: true,
+        fillColor: const Color(0xFF1A2640),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(BioSenseRadius.md),
+          borderSide: BorderSide.none),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(BioSenseRadius.md),
+          borderSide: BorderSide.none),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(BioSenseRadius.md),
+          borderSide: const BorderSide(
+            color: Color(0xFF10AC84), width: 1.5)),
         contentPadding: const EdgeInsets.symmetric(
-          horizontal: 16, vertical: 14)),
+          horizontal: 16, vertical: 16)),
     ));
 }
 
