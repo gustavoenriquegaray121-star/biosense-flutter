@@ -5,6 +5,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../providers/app_state_provider.dart';
@@ -459,19 +460,22 @@ class _Page4Emergency extends StatelessWidget {
         icon: Icons.bluetooth_outlined,
         label: isEs ? 'Bluetooth' : 'Bluetooth',
         desc: isEs ? 'Enlace con la pulsera BioSense' : 'Link with BioSense band',
-        color: const Color(0xFF4FC3F7)),
+        color: const Color(0xFF4FC3F7),
+        permission: Permission.bluetoothConnect),
       const SizedBox(height: 8),
       _PermissionRow(
         icon: Icons.notifications_outlined,
         label: isEs ? 'Notificaciones' : 'Notifications',
         desc: isEs ? 'Alertas predictivas del motor PHSE' : 'PHSE engine predictive alerts',
-        color: const Color(0xFF10AC84)),
+        color: const Color(0xFF10AC84),
+        permission: Permission.notification),
       const SizedBox(height: 8),
       _PermissionRow(
         icon: Icons.location_on_outlined,
         label: isEs ? 'Ubicación' : 'Location',
         desc: isEs ? 'Coordenadas en alertas de emergencia' : 'Coordinates in emergency alerts',
-        color: const Color(0xFFF39C12)),
+        color: const Color(0xFFF39C12),
+        permission: Permission.locationWhenInUse),
 
       const SizedBox(height: 24),
       Container(
@@ -707,34 +711,69 @@ class _ActivityTile extends StatelessWidget {
       ])));
 }
 
-class _PermissionRow extends StatelessWidget {
+class _PermissionRow extends StatefulWidget {
   final IconData icon;
   final String label, desc;
   final Color color;
+  final Permission permission;
 
   const _PermissionRow({required this.icon, required this.label,
-    required this.desc, required this.color});
+    required this.desc, required this.color, required this.permission});
 
   @override
-  Widget build(BuildContext context) => Container(
-    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-    decoration: BoxDecoration(
-      color: color.withOpacity(0.08),
-      borderRadius: BorderRadius.circular(BioSenseRadius.md),
-      border: Border.all(color: color.withOpacity(0.25))),
-    child: Row(children: [
-      Icon(icon, color: color, size: 20),
-      const SizedBox(width: 12),
-      Expanded(child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-        Text(label, style: TextStyle(
-          fontFamily: 'Inter', fontSize: 13,
-          fontWeight: FontWeight.w600, color: color)),
-        Text(desc, style: const TextStyle(
-          fontFamily: 'Inter', fontSize: 11, color: Colors.white38)),
-      ])),
-      Icon(Icons.chevron_right_outlined,
-        color: color.withOpacity(0.5), size: 18),
-    ]));
+  State<_PermissionRow> createState() => _PermissionRowState();
+}
+
+class _PermissionRowState extends State<_PermissionRow> {
+  PermissionStatus _status = PermissionStatus.denied;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkStatus();
+  }
+
+  Future<void> _checkStatus() async {
+    final s = await widget.permission.status;
+    if (mounted) setState(() => _status = s);
+  }
+
+  Future<void> _requestPermission() async {
+    final s = await widget.permission.request();
+    if (mounted) setState(() => _status = s);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final granted = _status.isGranted;
+    final color = granted ? const Color(0xFF10AC84) : widget.color;
+
+    return GestureDetector(
+      onTap: granted ? null : _requestPermission,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        decoration: BoxDecoration(
+          color: color.withOpacity(0.08),
+          borderRadius: BorderRadius.circular(BioSenseRadius.md),
+          border: Border.all(color: color.withOpacity(0.35))),
+        child: Row(children: [
+          Icon(widget.icon, color: color, size: 20),
+          const SizedBox(width: 12),
+          Expanded(child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+            Text(widget.label, style: TextStyle(
+              fontFamily: 'Inter', fontSize: 13,
+              fontWeight: FontWeight.w600, color: color)),
+            Text(widget.desc, style: const TextStyle(
+              fontFamily: 'Inter', fontSize: 11, color: Colors.white38)),
+          ])),
+          granted
+            ? const Icon(Icons.check_circle_outline,
+                color: Color(0xFF10AC84), size: 20)
+            : Icon(Icons.chevron_right_outlined,
+                color: color.withOpacity(0.5), size: 18),
+        ]));
+    );
+  }
 }
