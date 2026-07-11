@@ -39,6 +39,7 @@ dependencies:
   cupertino_icons: ^1.0.6
 
   # Llamadas telefónicas
+  permission_handler: ^11.3.1
   url_launcher: ^6.3.0
 
   # BLE — versión fija comprobada
