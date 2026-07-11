@@ -10,6 +10,7 @@ import 'package:provider/provider.dart';
 import '../providers/app_state_provider.dart';
 import '../widgets/quick_log_bar.dart';
 import '../design/biosense_theme.dart';
+import '../widgets/secure_link_widget.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -372,6 +373,10 @@ class _HomeScreenState extends State<HomeScreen>
 
                   // ── BOTÓN SOLICITAR AYUDA
                   _HelpButton(isEs: isEs, isCrit: isCrit),
+                  const SizedBox(height: BioSenseSpacing.xxl),
+
+                  // ── PHOENIX SECURELINK
+                  SecureLinkCard(isEs: isEs, isCrit: isCrit),
                   const SizedBox(height: BioSenseSpacing.xxl),
                   BioSenseTheme.institutionalFooter(dark: isCrit),
                 ],
