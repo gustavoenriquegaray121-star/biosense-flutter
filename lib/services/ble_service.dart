@@ -2,10 +2,11 @@
 // BIOSENSE OS — BLE Service v2.0
 // UUIDs sincronizados con firmware biosense_band.ino
 // MTU negociada: 64 bytes
-// Parseo correcto de bytes raw → SecureTelemetryPacket
+// Mantiene interfaz compatible con HealthRepository y AppStateProvider
 // ============================================================
 
 import 'dart:async';
+import 'dart:math';
 import 'dart:typed_data';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import '../core/secure_ble_service.dart';
@@ -16,88 +17,100 @@ import '../core/secure_ble_service.dart';
 const String kServiceUUID        = 'A17EA550-1A1D-4C8D-8A9E-D18A3B5C2F4E';
 const String kCharacteristicUUID = 'B105E45E-2A7D-4C8A-9F3E-A1B2C3D4E5F6';
 const String kDeviceName         = 'BioSense-Band';
-const int    kMtuRequested       = 64;  // MTU mínima para 44 bytes de paquete
-const int    kPacketSize         = 44;  // Tamaño exacto del SecureTelemetryPacket
+const int    kMtuRequested       = 64;
+const int    kPacketSize         = 44;
 
 // ============================================================
-// ESTADO DE CONEXIÓN
+// ESTADO DE CONEXIÓN — compatible con AppStateProvider
 // ============================================================
-enum BleConnectionState {
+enum BleConnectionStatus {
   disconnected,
   scanning,
   connecting,
   connected,
   mtuNegotiating,
-  ready,          // Conectado + MTU OK + características encontradas
+  ready,
   signalLost,
   error,
 }
 
 // ============================================================
-// BLE SERVICE
+// BLE SERVICE — interfaz compatible con HealthRepository
 // ============================================================
 class BleService {
-  // Instancia singleton
-  static final BleService _instance = BleService._internal();
-  factory BleService() => _instance;
-  BleService._internal();
-
-  // Estado
-  BleConnectionState _state = BleConnectionState.disconnected;
+  // Estado y conexión
+  BleConnectionStatus _status = BleConnectionStatus.disconnected;
   BluetoothDevice? _device;
-  BluetoothCharacteristic? _characteristic;
-  int _negotiatedMtu = 23; // MTU default BLE
+  int _negotiatedMtu = 23;
 
   // Motor de autenticación SecureLink
   final BioSenseAuthEngine _authEngine = BioSenseAuthEngine();
+  final MockBandPacketGenerator _generator = MockBandPacketGenerator();
 
-  // Buffer de fragmentación (para paquetes fragmentados)
+  // Buffer para fragmentación
   final List<int> _fragmentBuffer = [];
-  int _lastFragmentSeq = -1;
+
+  // Mock mode
+  bool _mockMode = false;
+  double _mockPerturbation = 0.0;
+  Timer? _mockTimer;
+  final Random _rng = Random();
 
   // Streams públicos
-  final StreamController<BleConnectionState> _stateCtrl =
-      StreamController<BleConnectionState>.broadcast();
-  final StreamController<SecureTelemetryPacket> _packetCtrl =
-      StreamController<SecureTelemetryPacket>.broadcast();
-  final StreamController<ValidationResult> _validationCtrl =
+  final _statusCtrl =
+      StreamController<BleConnectionStatus>.broadcast();
+  final _rawMetricsCtrl =
+      StreamController<Map<String, double>>.broadcast();
+  final _validationCtrl =
       StreamController<ValidationResult>.broadcast();
 
-  // Stream adicional para lectura de métricas en bruto requerida por repositorios analíticos
-  final StreamController<List<int>> _rawMetricsCtrl =
-      StreamController<List<int>>.broadcast();
+  // ── Streams expuestos
+  Stream<BleConnectionStatus> get statusStream  => _statusCtrl.stream;
+  Stream<Map<String, double>> get rawMetricsStream => _rawMetricsCtrl.stream;
+  Stream<ValidationResult>    get validationStream => _validationCtrl.stream;
 
-  Stream<BleConnectionState> get stateStream => _stateCtrl.stream;
-  Stream<SecureTelemetryPacket> get packetStream => _packetCtrl.stream;
-  Stream<ValidationResult> get validationStream => _validationCtrl.stream;
-  
-  // Getters y aliases puente para resolver los errores de compilación externos
-  Stream<BleConnectionState> get statusStream => _stateCtrl.stream;
-  Stream<List<int>> get rawMetricsStream => _rawMetricsCtrl.stream;
-
-  BleConnectionState get state => _state;
-  int get negotiatedMtu => _negotiatedMtu;
-  int get trustScore => _authEngine.trustScore;
+  BleConnectionStatus get status => _status;
+  int  get trustScore  => _authEngine.trustScore;
   TrustLevel get trustLevel => _authEngine.trustLevel;
 
-  // ── Iniciar escaneo
+  // ── Mock mode (sin hardware físico)
+  void startMockMode({double perturbation = 0.0}) {
+    _mockMode = true;
+    _mockPerturbation = perturbation;
+    _mockTimer?.cancel();
+    _setState(BleConnectionStatus.ready);
+
+    _mockTimer = Timer.periodic(const Duration(milliseconds: 200), (_) {
+      final noise = (_rng.nextDouble() - 0.5) * 0.04;
+      _rawMetricsCtrl.add({
+        'hrv':  1.0 + noise - _mockPerturbation,
+        'temp': 1.0 + noise * 0.5 + _mockPerturbation * 0.3,
+        'resp': 1.0 + noise * 0.3 + _mockPerturbation * 0.2,
+        'gsr':  1.0 + noise * 0.8 + _mockPerturbation * 0.5,
+      });
+    });
+  }
+
+  void setMockPerturbation(double p) {
+    _mockPerturbation = p;
+    if (!_mockMode) startMockMode(perturbation: p);
+  }
+
+  // ── Escaneo BLE real
   Future<void> startScan() async {
-    _setState(BleConnectionState.scanning);
+    if (_mockMode) { startMockMode(); return; }
+    _setState(BleConnectionStatus.scanning);
 
     try {
-      // CORRECCIÓN API: En la versión instalada de tu entorno se filtra pasándole 
-      // únicamente el Service UUID en la configuración de escaneo
       await FlutterBluePlus.startScan(
         withServices: [Guid(kServiceUUID)],
         timeout: const Duration(seconds: 10));
 
       FlutterBluePlus.scanResults.listen((results) {
         for (final r in results) {
-          // CORRECCIÓN API: Para tu versión exacta, el acceso al nombre del dispositivo
-          // se realiza mediante localName o platformName. Usamos localName para resolver los errores 13 y 14.
-          if (r.advertisementData.localName == kDeviceName ||
-              r.device.localName == kDeviceName ||
-              r.advertisementData.serviceUuids.contains(Guid(kServiceUUID))) {
+          final uuids = r.advertisementData.serviceUuids
+              .map((g) => g.toString().toUpperCase()).toList();
+          if (uuids.contains(kServiceUUID.toUpperCase())) {
             FlutterBluePlus.stopScan();
             _connect(r.device);
             break;
@@ -105,162 +118,115 @@ class BleService {
         }
       });
     } catch (e) {
-      _setState(BleConnectionState.error);
+      _setState(BleConnectionStatus.error);
     }
   }
 
-  // ── Conectar al dispositivo
   Future<void> _connect(BluetoothDevice device) async {
-    _setState(BleConnectionState.connecting);
+    _setState(BleConnectionStatus.connecting);
     _device = device;
 
     try {
       await device.connect(timeout: const Duration(seconds: 10));
-      _setState(BleConnectionState.connected);
+      _setState(BleConnectionStatus.connected);
 
-      // Escuchar desconexión
       device.connectionState.listen((state) {
         if (state == BluetoothConnectionState.disconnected) {
-          _setState(BleConnectionState.signalLost);
+          _setState(BleConnectionStatus.signalLost);
           _fragmentBuffer.clear();
           _authEngine.resetSession();
         }
       });
 
-      // Negociar MTU — CRÍTICO para paquetes de 44 bytes
-      await _negotiateMtu(device);
-
-      // Descubrir servicios y característica
-      await _discoverServices(device);
-
-    } catch (e) {
-      _setState(BleConnectionState.error);
-    }
-  }
-
-  // ── Negociar MTU mayor al default de 23 bytes
-  Future<void> _negotiateMtu(BluetoothDevice device) async {
-    _setState(BleConnectionState.mtuNegotiating);
-    try {
-      _negotiatedMtu = await device.requestMtu(kMtuRequested);
-      if (_negotiatedMtu < kPacketSize) {
-        // MTU insuficiente — activar modo fragmentación
-        _fragmentBuffer.clear();
+      // Negociar MTU
+      _setState(BleConnectionStatus.mtuNegotiating);
+      try {
+        _negotiatedMtu = await device.requestMtu(kMtuRequested);
+      } catch (_) {
+        _negotiatedMtu = 23; // fallback con fragmentación
       }
-    } catch (e) {
-      // Algunos dispositivos no soportan cambio de MTU
-      // Activar fragmentación automáticamente
-      _negotiatedMtu = 23;
-    }
-  }
 
-  // ── Descubrir servicios
-  Future<void> _discoverServices(BluetoothDevice device) async {
-    final services = await device.discoverServices();
-
-    for (final service in services) {
-      if (service.uuid == Guid(kServiceUUID)) {
-        for (final char in service.characteristics) {
-          if (char.uuid == Guid(kCharacteristicUUID)) {
-            _characteristic = char;
-            await _subscribeToNotifications(char);
-            _setState(BleConnectionState.ready);
-            return;
+      // Descubrir servicios
+      final services = await device.discoverServices();
+      for (final service in services) {
+        if (service.uuid == Guid(kServiceUUID)) {
+          for (final char in service.characteristics) {
+            if (char.uuid == Guid(kCharacteristicUUID)) {
+              await char.setNotifyValue(true);
+              char.onValueReceived.listen(_handleRawBytes);
+              _setState(BleConnectionStatus.ready);
+              return;
+            }
           }
         }
       }
+      _setState(BleConnectionStatus.error);
+    } catch (e) {
+      _setState(BleConnectionStatus.error);
     }
-
-    // No se encontró la característica
-    _setState(BleConnectionState.error);
   }
 
-  // ── Suscribirse a notificaciones BLE
-  Future<void> _subscribeToNotifications(
-      BluetoothCharacteristic char) async {
-    await char.setNotifyValue(true);
-
-    char.onValueReceived.listen((rawBytes) {
-      _rawMetricsCtrl.add(rawBytes); // Registra el flujo raw para el repositorio analítico
-      _handleRawBytes(rawBytes);
-    });
-  }
-
-  // ── Parsear bytes raw → SecureTelemetryPacket
-  // ESTE ES EL PUNTO CRÍTICO — convierte uint8[] del ESP32 a objeto Dart
+  // ── Parseo de bytes raw del ESP32
   void _handleRawBytes(List<int> rawBytes) {
-    // Si MTU < 44 bytes, necesitamos reassembly
     if (_negotiatedMtu < kPacketSize) {
-      _handleFragmented(rawBytes);
-    } else {
-      _parseCompletePacket(Uint8List.fromList(rawBytes));
-    }
-  }
-
-  // ── Manejar fragmentación cuando MTU < 44 bytes
-  void _handleFragmented(List<int> fragment) {
-    _fragmentBuffer.addAll(fragment);
-
-    // Cuando acumulamos 44 bytes, tenemos el paquete completo
-    if (_fragmentBuffer.length >= kPacketSize) {
-      final completePacket =
-          Uint8List.fromList(_fragmentBuffer.take(kPacketSize).toList());
-      
-      // Mapeamos el sequence index para mantener actualizada la traza interna si es necesario
-      if (completePacket.length >= 4) {
-        _lastFragmentSeq = completePacket[0] | (completePacket[1] << 8);
+      // Fragmentación: acumular hasta 44 bytes
+      _fragmentBuffer.addAll(rawBytes);
+      if (_fragmentBuffer.length >= kPacketSize) {
+        final complete = Uint8List.fromList(
+            _fragmentBuffer.take(kPacketSize).toList());
+        _fragmentBuffer.removeRange(0, kPacketSize);
+        _parsePacket(complete);
       }
-
-      _fragmentBuffer.removeRange(0, kPacketSize);
-      _parseCompletePacket(completePacket);
+    } else {
+      _parsePacket(Uint8List.fromList(rawBytes));
     }
   }
 
-  // ── Parsear paquete completo de 44 bytes
-  void _parseCompletePacket(Uint8List bytes) {
+  void _parsePacket(Uint8List bytes) {
     if (bytes.length < kPacketSize) return;
-
-    // Deserializar bytes → SecureTelemetryPacket
     final packet = SecureTelemetryPacket.fromBytes(bytes);
     if (packet == null) return;
 
-    // Validar con BioSenseAuthEngine (anti-replay + auth tag)
     final result = _authEngine.validatePacket(packet);
     _validationCtrl.add(result);
 
     if (result.isValid) {
-      // Solo emitir si el paquete es auténtico
-      _packetCtrl.add(packet);
+      // Normalizar métricas para el motor DHSI
+      _rawMetricsCtrl.add({
+        'hrv':  _normalize(packet.hrv,  20, 100),
+        'temp': _normalize(packet.temperature, 35.5, 38.5),
+        'resp': _normalize(packet.spO2, 95, 100),
+        'gsr':  _normalize(packet.gsr,  0.1, 10.0),
+      });
     }
   }
 
-  // ── Desconectar
-  Future<void> disconnect() async {
-    await _device?.disconnect();
-    _device = null;
-    _characteristic = null;
-    _fragmentBuffer.clear();
-    _authEngine.resetSession();
-    _setState(BleConnectionState.disconnected);
+  // Normalizar valor a rango 0.7-1.3 para el motor DHSI
+  double _normalize(double val, double min, double max) {
+    final normalized = (val - min) / (max - min);
+    return 0.7 + normalized * 0.6;
   }
 
-  // Métodos puente e interfaces requeridas por simulación y repositorios externos
-  Future<void> disconnectDevice() async => await disconnect();
-  void startMockMode() {}
-  void setMockPerturbation(double value) {}
+  // ── Desconectar
+  Future<void> disconnectDevice() async {
+    _mockTimer?.cancel();
+    _mockMode = false;
+    await _device?.disconnect();
+    _device = null;
+    _fragmentBuffer.clear();
+    _authEngine.resetSession();
+    _setState(BleConnectionStatus.disconnected);
+  }
 
-  void _setState(BleConnectionState s) {
-    _state = s;
-    _stateCtrl.add(s);
+  void _setState(BleConnectionStatus s) {
+    _status = s;
+    _statusCtrl.add(s);
   }
 
   void dispose() {
-    _stateCtrl.close();
-    _packetCtrl.close();
-    _validationCtrl.close();
+    _mockTimer?.cancel();
+    _statusCtrl.close();
     _rawMetricsCtrl.close();
+    _validationCtrl.close();
   }
 }
-
-// ── Definición del tipo alias para evitar que fallen los archivos dependientes externos
-typedef BleConnectionStatus = BleConnectionState;
