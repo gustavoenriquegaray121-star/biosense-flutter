@@ -55,6 +55,11 @@ class AppStateProvider extends ChangeNotifier {
 
   String t(String key) => _localization.t(key);
 
+  // Control de voz — solo habla cuando cambia el estado
+  String _lastSpokenStatus = '';
+  DateTime _lastSpokenTime = DateTime.fromMillisecondsSinceEpoch(0);
+  static const Duration _minVoiceInterval = Duration(minutes: 3);
+
   // ── Inicia la escucha del stream de análisis ───────────────
   void _startListening() {
     _healthSub = _healthRepository.healthAnalysisStream.listen((data) {
@@ -154,6 +159,23 @@ class AppStateProvider extends ChangeNotifier {
   void _triggerVoiceIfNeeded() {
     if (!_voiceEnabled) return;
     final key = _currentHealthState.statusKey;
+    final now = DateTime.now();
+
+    // Solo hablar si:
+    // 1. El estado cambió, O
+    // 2. Han pasado al menos 3 minutos desde la última vez
+    final stateChanged = key != _lastSpokenStatus;
+    final enoughTimePassed = now.difference(_lastSpokenTime) >= _minVoiceInterval;
+
+    // En estado crítico o alerta, hablar siempre que cambie
+    // En estado estable, solo cada 3 minutos como máximo
+    final isCritical = key == 'danger' || key == 'critical' || key == 'alert';
+
+    if (!stateChanged && !enoughTimePassed) return;
+    if (!stateChanged && !isCritical && !enoughTimePassed) return;
+
+    _lastSpokenStatus = key;
+    _lastSpokenTime = now;
 
     // Si hay café activo y todo está estable, mensaje especial
     final hasActiveCoffee = eventLog.activeEvents
