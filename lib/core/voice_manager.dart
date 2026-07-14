@@ -12,19 +12,22 @@ class VoiceManager {
   static final VoiceManager _instance = VoiceManager._internal();
   factory VoiceManager() => _instance;
   VoiceManager._internal();
+
   final FlutterTts _tts = FlutterTts();
   String _lastStatusKey = '';
   bool _enabled = true;
-
-  VoiceManager() {
-    _init();
-  }
 
   Future<void> _init() async {
     await _tts.setLanguage('es-MX');
     await _tts.setSpeechRate(0.48);
     await _tts.setVolume(0.85);
     await _tts.setPitch(1.0);
+  }
+
+  // Inicialización segura
+  static Future<VoiceManager> create() async {
+    await _instance._init();
+    return _instance;
   }
 
   void setLanguage(AppLanguage lang) {
