@@ -16,10 +16,6 @@ class VoiceManager {
   String _lastStatusKey = '';
   bool _enabled = true;
 
-  VoiceManager() {
-    _init();
-  }
-
   Future<void> _init() async {
     await _tts.setLanguage('es-MX');
     await _tts.setSpeechRate(0.48);
