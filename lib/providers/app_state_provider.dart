@@ -168,11 +168,10 @@ class AppStateProvider extends ChangeNotifier {
     final enoughTimePassed = now.difference(_lastSpokenTime) >= _minVoiceInterval;
 
     // En estado crítico o alerta, hablar siempre que cambie
-    // En estado estable, solo cada 3 minutos como máximo
     final isCritical = key == 'danger' || key == 'critical' || key == 'alert';
 
-    // Lógica simple: si no cambió Y no pasaron 3 min -> silencio
-    if (!stateChanged && !enoughTimePassed) return;
+    // Lógica: si es crítico se habla siempre, si no requiere cambio o tiempo
+    if (!isCritical && !stateChanged && !enoughTimePassed) return;
 
     _lastSpokenStatus = key;
     _lastSpokenTime = now;
