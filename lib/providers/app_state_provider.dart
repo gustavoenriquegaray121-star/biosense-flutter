@@ -171,8 +171,8 @@ class AppStateProvider extends ChangeNotifier {
     // En estado estable, solo cada 3 minutos como máximo
     final isCritical = key == 'danger' || key == 'critical' || key == 'alert';
 
+    // Lógica simple: si no cambió Y no pasaron 3 min -> silencio
     if (!stateChanged && !enoughTimePassed) return;
-    if (!stateChanged && !isCritical && !enoughTimePassed) return;
 
     _lastSpokenStatus = key;
     _lastSpokenTime = now;
