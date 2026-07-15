@@ -36,13 +36,11 @@ class VoiceManager {
 
   Future<void> speakStatus(String statusKey, String message) async {
     if (!_enabled) return;
-    final now = DateTime.now();
-    final sameStatus = statusKey == _lastStatusKey;
-    final tooSoon = now.difference(_lastSpeakTime) < _minInterval;
-    // Silencio si: mismo estado Y menos de 60 segundos desde última vez
-    if (sameStatus && tooSoon) return;
+    if (_isSpeaking) return;
+    // Solo hablar si el estado CAMBIÓ
+    if (statusKey == _lastStatusKey) return;
     _lastStatusKey = statusKey;
-    _lastSpeakTime = now;
+    _lastSpeakTime = DateTime.now();
     await _speak(message);
   }
 
