@@ -1,26 +1,28 @@
 // ============================================================
 // BIOSENSE — Voice Manager
 // "Altea te habla cuando no puedes ver la pantalla"
-// El paletero, el albañil, el invidente — todos escuchan.
+// Singleton — solo habla cuando el estado CAMBIA
 // ============================================================
 
 import 'package:flutter_tts/flutter_tts.dart';
 import 'localization_manager.dart';
 
 class VoiceManager {
-  // Singleton — garantiza que _lastStatusKey nunca se resetea
   static final VoiceManager _instance = VoiceManager._internal();
   factory VoiceManager() => _instance;
   VoiceManager._internal();
+
   final FlutterTts _tts = FlutterTts();
   String _lastStatusKey = '';
   bool _enabled = true;
+  bool _isSpeaking = false;
 
-  Future<void> _init() async {
-    await _tts.setLanguage('es-MX');
-    await _tts.setSpeechRate(0.48);
-    await _tts.setVolume(0.85);
-    await _tts.setPitch(1.0);
+  static Future<VoiceManager> create() async {
+    await _instance._tts.setLanguage('es-MX');
+    await _instance._tts.setSpeechRate(0.48);
+    await _instance._tts.setVolume(0.85);
+    await _instance._tts.setPitch(1.0);
+    return _instance;
   }
 
   void setLanguage(AppLanguage lang) {
@@ -30,14 +32,12 @@ class VoiceManager {
   void setEnabled(bool v) => _enabled = v;
   bool get isEnabled => _enabled;
 
-  /// Habla solo si el statusKey CAMBIÓ — evita repetir cada segundo
+  // Solo habla cuando el estado CAMBIA y no está hablando
   Future<void> speakStatus(String statusKey, String message) async {
     if (!_enabled) return;
     if (_isSpeaking) return;
-    // Solo hablar si el estado CAMBIÓ
     if (statusKey == _lastStatusKey) return;
     _lastStatusKey = statusKey;
-    _lastSpeakTime = DateTime.now();
     await _speak(message);
   }
 
@@ -45,8 +45,6 @@ class VoiceManager {
     if (!_enabled) return;
     await _speak(text);
   }
-
-  bool _isSpeaking = false;
 
   Future<void> _speak(String text) async {
     if (_isSpeaking) return;
@@ -59,6 +57,5 @@ class VoiceManager {
   }
 
   Future<void> stop() async => _tts.stop();
-
   void dispose() => _tts.stop();
 }
