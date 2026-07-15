@@ -31,9 +31,6 @@ class VoiceManager {
   bool get isEnabled => _enabled;
 
   /// Habla solo si el statusKey CAMBIÓ — evita repetir cada segundo
-  DateTime _lastSpeakTime = DateTime.fromMillisecondsSinceEpoch(0);
-  static const Duration _minInterval = Duration(seconds: 60);
-
   Future<void> speakStatus(String statusKey, String message) async {
     if (!_enabled) return;
     if (_isSpeaking) return;
