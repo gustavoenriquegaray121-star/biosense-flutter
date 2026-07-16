@@ -321,8 +321,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         ? 'Sin pulsera física — modo demostración activo'
                         : 'No physical band — demo mode active')
                     : (isEs
-                        ? 'Buscando pulsera BioSense por Bluetooth...'
-                        : 'Searching for BioSense band via Bluetooth...'),
+                        ? 'Buscando pulsera PHSE por Bluetooth...'
+                        : 'Searching for PHSE band via Bluetooth...'),
                   style: BioSenseText.caption),
                 secondary: Icon(Icons.bluetooth_outlined,
                   color: BioSenseColor.warning),
@@ -339,8 +339,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 border: Border.all(color: BioSenseColor.border)),
               child: Text(
                 isEs
-                  ? 'BioSense es un sistema de alerta predictiva de grado clínico. No emite diagnósticos médicos. La interpretación clínica y el diagnóstico permanecen bajo la responsabilidad exclusiva del profesional de la salud habilitado.'
-                  : 'BioSense is a clinical-grade predictive alert system. It does not issue medical diagnoses. Clinical interpretation and diagnosis remain under the exclusive responsibility of the licensed healthcare professional.',
+                  ? 'PHSE Altea Garay es un sistema de alerta predictiva de grado clínico. No emite diagnósticos médicos. La interpretación clínica y el diagnóstico permanecen bajo la responsabilidad exclusiva del profesional de la salud habilitado.'
+                  : 'PHSE Altea Garay is a clinical-grade predictive alert system. It does not issue medical diagnoses. Clinical interpretation and diagnosis remain under the exclusive responsibility of the licensed healthcare professional.',
                 style: BioSenseText.caption.copyWith(height: 1.6)),
             ),
             const SizedBox(height: BioSenseSpacing.xxl),
@@ -389,4 +389,4 @@ class _ProfileOption {
   final IconData icon;
   final String label;
   const _ProfileOption(this.profile, this.icon, this.label);
-}
+}             
