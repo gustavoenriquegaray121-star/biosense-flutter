@@ -3,10 +3,10 @@
 // ============================================================
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:biosense/core/kalman_filter.dart';
-import 'package:biosense/core/dhsi_calculator.dart';
-import 'package:biosense/core/trend_detector.dart';
-import 'package:biosense/models/user_profile.dart';
+import 'package:phse_altea_garay/core/kalman_filter.dart';
+import 'package:phse_altea_garay/core/dhsi_calculator.dart';
+import 'package:phse_altea_garay/core/trend_detector.dart';
+import 'package:phse_altea_garay/models/user_profile.dart';
 
 void main() {
 
