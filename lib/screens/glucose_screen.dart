@@ -600,19 +600,22 @@ class _GlucStat extends StatelessWidget {
     required this.color});
 
   @override
-  Widget build(BuildContext context) => Expanded(child: Container(
-    padding: const EdgeInsets.all(BioSenseSpacing.sm),
-    decoration: BoxDecoration(
-      color: color.withOpacity(0.08),
-      borderRadius: BorderRadius.circular(BioSenseRadius.sm),
-      border: Border.all(color: color.withOpacity(0.20))),
-    child: Column(children: [
-      Text(value,
-        style: TextStyle(
-          fontFamily: 'Inter', fontSize: 12,
-          fontWeight: FontWeight.w700, color: color),
-        textAlign: TextAlign.center),
-      Text(label, style: BioSenseText.caption,
-        textAlign: TextAlign.center),
-    ]))));
+  Widget build(BuildContext context) => Expanded(
+    child: Container(
+      padding: const EdgeInsets.all(BioSenseSpacing.sm),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.08),
+        borderRadius: BorderRadius.circular(BioSenseRadius.sm),
+        border: Border.all(color: color.withOpacity(0.20))),
+      child: Column(children: [
+        Text(value,
+          style: TextStyle(
+            fontFamily: 'Inter', fontSize: 12,
+            fontWeight: FontWeight.w700, color: color),
+          textAlign: TextAlign.center),
+        Text(label, style: BioSenseText.caption,
+          textAlign: TextAlign.center),
+      ]),
+    ),
+  );
 }
