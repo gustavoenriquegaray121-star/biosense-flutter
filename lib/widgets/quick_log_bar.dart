@@ -59,8 +59,8 @@ class QuickLogBar extends StatelessWidget {
         const SizedBox(height: 4),
         Text(
           isEs
-            ? 'BioSense descuenta estos factores del análisis'
-            : 'BioSense removes these factors from the analysis',
+            ? 'PHSE Altea Garay descuenta estos factores del análisis'
+            : 'PHSE Altea Garay removes these factors from the analysis',
           style: const TextStyle(fontSize: 11, color: Color(0xFF94A3B8))),
         const SizedBox(height: 12),
 
@@ -123,8 +123,8 @@ class QuickLogBar extends StatelessWidget {
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Text(
                 isEs
-                  ? isEs ? '🔬 BioSense está descontando:' : '🔬 BioSense is removing:'
-                  : '🔬 BioSense is removing:',
+                  ? isEs ? '🔬 PHSE está descontando:' : '🔬 PHSE is removing:'
+                  : '🔬 PHSE is removing:',
                 style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600,
                   color: Color(0xFF2E75B6))),
               const SizedBox(height: 6),
