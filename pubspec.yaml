@@ -1,5 +1,5 @@
-name: biosense
-description: BioSense v1.0 — Early Homeostasis Deviation Alert | ALTEA-GARAY HTS
+name: phse_altea_garay
+description: PHSE Altea Garay v1.0 — Early Homeostasis Deviation Alert | ALTEA-GARAY HTS
 publish_to: 'none'
 version: 1.0.0+1
 
