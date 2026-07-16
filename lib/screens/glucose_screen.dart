@@ -155,7 +155,7 @@ class _GlucoseScreenState extends State<GlucoseScreen>
                 border: Border.all(color: color.withOpacity(0.3))),
               child: Text(
                 isEs ? 'NIR No Invasivo' : 'NIR Non-Invasive',
-                style: BioSenseText.label.copyWith(color: color)))),
+                style: BioSenseText.label.copyWith(color: color))),
         ],
       ),
       body: SingleChildScrollView(
