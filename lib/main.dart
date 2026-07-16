@@ -28,12 +28,12 @@ void main() async {
   final eventLog = EventLog();
   await eventLog.load();
 
-  runApp(BioSenseApp(eventLog: eventLog));
+  runApp(PhseApp(eventLog: eventLog));
 }
 
-class BioSenseApp extends StatelessWidget {
+class PhseApp extends StatelessWidget {
   final EventLog eventLog;
-  const BioSenseApp({super.key, required this.eventLog});
+  const PhseApp({super.key, required this.eventLog});
 
   @override
   Widget build(BuildContext context) {
