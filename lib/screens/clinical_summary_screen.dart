@@ -154,7 +154,7 @@ class _ClinicalSummaryScreenState extends State<ClinicalSummaryScreen>
                   fontFeatures: [FontFeature.tabularFigures()])),
               ]),
               const SizedBox(height: 12),
-              const Text('BioSense Clinical Console', style: TextStyle(
+              const Text('PHSE Altea Garay Clinical Console', style: TextStyle(
                 fontSize: 20, fontWeight: FontWeight.w700, color: Colors.white,
                 letterSpacing: 0.3)),
               Text(
@@ -401,7 +401,7 @@ class _ClinicalSummaryScreenState extends State<ClinicalSummaryScreen>
                 )),
               const SizedBox(height: 16),
               const Center(child: Text(
-                'BioSense v1.0  |  ALTEA-GARAY HTS  |  USPTO #63/914,860',
+                'PHSE Altea Garay v1.0  |  ALTEA-GARAY HTS  |  USPTO #63/914,860',
                 style: TextStyle(fontSize: 9, color: Color(0xFF566573),
                   letterSpacing: 0.5))),
               const SizedBox(height: 8),
@@ -477,7 +477,7 @@ class _ClinicalSummaryScreenState extends State<ClinicalSummaryScreen>
             child: pw.Column(
               crossAxisAlignment: pw.CrossAxisAlignment.start,
               children: [
-                pw.Text('BioSense Clinical Console',
+                pw.Text('PHSE Altea Garay Clinical Console',
                   style: pw.TextStyle(fontSize: 18,
                     fontWeight: pw.FontWeight.bold,
                     color: PdfColors.white)),
@@ -524,7 +524,7 @@ class _ClinicalSummaryScreenState extends State<ClinicalSummaryScreen>
                 color: PdfColors.grey700))),
           pw.SizedBox(height: 8),
           pw.Text(
-            'BioSense v1.0  |  ALTEA-GARAY HTS  |  USPTO #63/914,860',
+            'PHSE Altea Garay v1.0  |  ALTEA-GARAY HTS  |  USPTO #63/914,860',
             style: pw.TextStyle(fontSize: 8, color: PdfColors.grey500)),
         ])));
 
