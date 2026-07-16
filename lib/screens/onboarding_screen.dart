@@ -459,7 +459,7 @@ class _Page4Emergency extends StatelessWidget {
       _PermissionRow(
         icon: Icons.bluetooth_outlined,
         label: isEs ? 'Bluetooth' : 'Bluetooth',
-        desc: isEs ? 'Enlace con la pulsera BioSense' : 'Link with BioSense band',
+        desc: isEs ? 'Enlace con la pulsera PHSE' : 'Link with PHSE band',
         color: const Color(0xFF4FC3F7),
         permission: Permission.bluetoothConnect),
       const SizedBox(height: 8),
@@ -491,8 +491,8 @@ class _Page4Emergency extends StatelessWidget {
           const SizedBox(width: 12),
           Expanded(child: Text(
             isEs
-              ? 'Todos tus datos se procesan localmente. BioSense no comparte información con terceros.'
-              : 'All data is processed locally. BioSense does not share information with third parties.',
+              ? 'Todos tus datos se procesan localmente. PHSE Altea Garay no comparte información con terceros.'
+              : 'All data is processed locally. PHSE Altea Garay does not share information with third parties.',
             style: const TextStyle(fontFamily: 'Inter', fontSize: 11,
               color: Color(0xFF10AC84), height: 1.4))),
         ])),
