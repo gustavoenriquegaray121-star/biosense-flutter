@@ -144,20 +144,20 @@ class _HomeScreenState extends State<HomeScreen>
                     Column(crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                       RichText(text: TextSpan(children: [
-                        TextSpan(text: 'Bio',
+                        TextSpan(text: 'PHSE ',
                           style: TextStyle(
                             fontFamily: 'Inter', fontSize: 26,
                             fontWeight: FontWeight.w300,
                             color: isCrit ? Colors.red[200] : BioSenseColor.primary,
                             letterSpacing: -0.5)),
-                        TextSpan(text: 'Sense',
+                        TextSpan(text: 'Altea Garay',
                           style: TextStyle(
                             fontFamily: 'Inter', fontSize: 26,
                             fontWeight: FontWeight.w800,
                             color: isCrit ? Colors.red[400] : BioSenseColor.accent,
                             letterSpacing: -0.5)),
                       ])),
-                      Text('Predictive Vital Monitoring System',
+                      Text('Predictive Homeostatic State Engine',
                         style: BioSenseText.caption.copyWith(
                           color: isCrit ? Colors.white38 : BioSenseColor.textMuted,
                           letterSpacing: 0.3)),
