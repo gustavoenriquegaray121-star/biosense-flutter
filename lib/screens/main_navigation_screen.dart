@@ -14,6 +14,7 @@ import 'clinical_summary_screen.dart';
 import 'family_guardian_screen.dart';
 import 'tips_screen.dart';
 import 'settings_screen.dart';
+import 'glucose_screen.dart';
 
 class MainNavigationScreen extends StatefulWidget {
   const MainNavigationScreen({super.key});
@@ -32,6 +33,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
     FamilyGuardianScreen(),
     TipsScreen(),
     SettingsScreen(),
+    const GlucoseScreen(),
   ];
 
   @override
@@ -67,6 +69,8 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
               isEs ? 'Consejos' : 'Tips'),
             _dest(Icons.tune_outlined,
               isEs ? 'Config.' : 'Config.'),
+            _dest(Icons.bloodtype_outlined,
+              isEs ? 'Glucosa' : 'Glucose'),
           ],
         ),
       ),
