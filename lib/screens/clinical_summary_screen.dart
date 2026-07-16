@@ -177,8 +177,8 @@ class _ClinicalSummaryScreenState extends State<ClinicalSummaryScreen>
                   color: BioSenseColor.warning.withOpacity(0.06)),
                 child: Text(
                   isEs
-                    ? 'Información de apoyo clínico. BioSense no emite diagnósticos. La interpretación corresponde al profesional de la salud.'
-                    : 'Clinical support information. BioSense does not diagnose. Interpretation belongs to the healthcare professional.',
+                    ? 'Información de apoyo clínico. PHSE Altea Garay no emite diagnósticos. La interpretación corresponde al profesional de la salud.'
+                    : 'Clinical support information. PHSE Altea Garay does not diagnose. Interpretation belongs to the healthcare professional.',
                   style: const TextStyle(fontSize: 11,
                     color: Color(0xFFF39C12), height: 1.4))),
               const SizedBox(height: 16),
@@ -518,8 +518,8 @@ class _ClinicalSummaryScreenState extends State<ClinicalSummaryScreen>
             color: PdfColors.grey100,
             child: pw.Text(
               isEs
-                ? 'AVISO: Este reporte es informativo. BioSense no emite diagnósticos médicos.'
-                : 'NOTICE: This report is informational. BioSense does not issue medical diagnoses.',
+                ? 'AVISO: Este reporte es informativo. PHSE Altea Garay no emite diagnósticos médicos.'
+                : 'NOTICE: This report is informational. PHSE Altea Garay does not issue medical diagnoses.',
               style: pw.TextStyle(fontSize: 9,
                 color: PdfColors.grey700))),
           pw.SizedBox(height: 8),
@@ -530,7 +530,7 @@ class _ClinicalSummaryScreenState extends State<ClinicalSummaryScreen>
 
     await Printing.layoutPdf(
       onLayout: (_) async => pdf.save(),
-      name: 'BioSense_Clinical_' + app.userName + '.pdf');
+      name: 'PHSE_AlteaGaray_Clinical_' + app.userName + '.pdf');
   }
 }
 
