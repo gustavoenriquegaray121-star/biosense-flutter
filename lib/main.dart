@@ -55,7 +55,7 @@ class BioSenseApp extends StatelessWidget {
         localization: localization,
       ),
       child: MaterialApp(
-        title: 'BioSense',
+        title: 'PHSE Altea Garay',
         debugShowCheckedModeBanner: false,
         localizationsDelegates: const [
           GlobalMaterialLocalizations.delegate,
@@ -156,15 +156,15 @@ class _SplashScreenState extends State<SplashScreen>
 
                 // Logotipo
                 RichText(text: const TextSpan(children: [
-                  TextSpan(text: 'Bio',
+                  TextSpan(text: 'PHSE ',
                     style: TextStyle(fontSize: 36, fontWeight: FontWeight.w300,
                       color: Colors.white70, letterSpacing: -1)),
-                  TextSpan(text: 'Sense',
+                  TextSpan(text: 'Altea Garay',
                     style: TextStyle(fontSize: 36, fontWeight: FontWeight.w800,
                       color: Color(0xFF10AC84), letterSpacing: -1)),
                 ])),
                 const SizedBox(height: 6),
-                const Text('Predictive Vital Monitoring System',
+                const Text('Predictive Homeostatic State Engine',
                   style: TextStyle(fontSize: 12, color: Colors.white38,
                     letterSpacing: 0.5)),
                 const Text('ALTEA-GARAY HTS  ·  USPTO #63/914,860',
