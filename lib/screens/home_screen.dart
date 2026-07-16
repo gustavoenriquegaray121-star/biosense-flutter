@@ -674,10 +674,10 @@ class _HelpButton extends StatelessWidget {
     final msg = isEs
       ? 'BIOSENSE ALERTA: ${context.read<AppStateProvider>().userName} '
         'necesita ayuda. Estado fisiológico: ALERTA. '
-        'Enviado desde BioSense | ALTEA-GARAY HTS'
+        'Enviado desde PHSE Altea Garay | ALTEA-GARAY HTS'
       : 'BIOSENSE ALERT: ${context.read<AppStateProvider>().userName} '
         'needs help. Physiological status: ALERT. '
-        'Sent from BioSense | ALTEA-GARAY HTS';
+        'Sent from PHSE Altea Garay | ALTEA-GARAY HTS';
 
     final uri = Uri(
       scheme: 'sms',
