@@ -120,11 +120,11 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                 RichText(text: const TextSpan(children: [
-                  TextSpan(text: 'Bio',
+                  TextSpan(text: 'PHSE ',
                     style: TextStyle(fontFamily: 'Inter',
                       fontSize: 18, fontWeight: FontWeight.w300,
                       color: Colors.white60)),
-                  TextSpan(text: 'Sense',
+                  TextSpan(text: 'Altea Garay',
                     style: TextStyle(fontFamily: 'Inter',
                       fontSize: 18, fontWeight: FontWeight.w800,
                       color: Color(0xFF10AC84))),
