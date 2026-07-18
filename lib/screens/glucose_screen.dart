@@ -262,6 +262,48 @@ class _GlucoseScreenState extends State<GlucoseScreen>
                       style: BioSenseText.subtitle.copyWith(
                         color: BioSenseColor.textMuted))),
                 ]),
+                const SizedBox(height: BioSenseSpacing.sm),
+                // Flecha de tendencia con delta
+                Builder(builder: (_) {
+                  final trend = _glucoseHistory.length > 5
+                    ? _glucoseHistory.last - _glucoseHistory[_glucoseHistory.length - 6]
+                    : 0.0;
+                  final IconData arrow;
+                  final Color arrowColor;
+                  final String deltaStr;
+                  if (trend.abs() < 0.5) {
+                    arrow = Icons.trending_flat;
+                    arrowColor = BioSenseColor.stable;
+                    deltaStr = isEs ? 'Estable' : 'Stable';
+                  } else if (trend > 0 && trend < 3.0) {
+                    arrow = Icons.trending_up;
+                    arrowColor = BioSenseColor.warning;
+                    deltaStr = '+${trend.toStringAsFixed(1)} mg/dL';
+                  } else if (trend >= 3.0) {
+                    arrow = Icons.trending_up;
+                    arrowColor = BioSenseColor.alert;
+                    deltaStr = '+${trend.toStringAsFixed(1)} mg/dL';
+                  } else if (trend < 0 && trend > -3.0) {
+                    arrow = Icons.trending_down;
+                    arrowColor = const Color(0xFF3498DB);
+                    deltaStr = '${trend.toStringAsFixed(1)} mg/dL';
+                  } else {
+                    arrow = Icons.trending_down;
+                    arrowColor = BioSenseColor.alert;
+                    deltaStr = '${trend.toStringAsFixed(1)} mg/dL';
+                  }
+                  return Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                    Icon(arrow, color: arrowColor, size: 20),
+                    const SizedBox(width: 6),
+                    Text(deltaStr,
+                      style: TextStyle(
+                        fontFamily: 'Inter', fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: arrowColor)),
+                  ]);
+                }),
                 const SizedBox(height: BioSenseSpacing.md),
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
@@ -503,6 +545,68 @@ class _GlucoseScreenState extends State<GlucoseScreen>
                       ])),
                     ]),
                   );
+                }),
+                const SizedBox(height: BioSenseSpacing.md),
+                // Confianza y calidad de señal
+                Builder(builder: (_) {
+                  final winnerFitness = _fitnessScores[_fitnessWinner];
+                  final confidence = (winnerFitness / 255.0 * 100).clamp(0.0, 100.0);
+                  final String quality;
+                  final Color qualityColor;
+                  if (confidence >= 90) {
+                    quality = isEs ? 'Excelente' : 'Excellent';
+                    qualityColor = BioSenseColor.stable;
+                  } else if (confidence >= 70) {
+                    quality = isEs ? 'Buena' : 'Good';
+                    qualityColor = BioSenseColor.accent;
+                  } else if (confidence >= 50) {
+                    quality = isEs ? 'Aceptable' : 'Acceptable';
+                    qualityColor = BioSenseColor.warning;
+                  } else {
+                    quality = isEs ? 'Baja' : 'Low';
+                    qualityColor = BioSenseColor.alert;
+                  }
+                  return Row(children: [
+                    Expanded(child: Container(
+                      padding: const EdgeInsets.all(BioSenseSpacing.sm),
+                      decoration: BoxDecoration(
+                        color: BioSenseColor.primary.withOpacity(0.05),
+                        borderRadius: BorderRadius.circular(BioSenseRadius.sm),
+                        border: Border.all(
+                          color: BioSenseColor.primary.withOpacity(0.12))),
+                      child: Row(children: [
+                        const Icon(Icons.verified_outlined,
+                          color: BioSenseColor.primary, size: 14),
+                        const SizedBox(width: 6),
+                        Text(
+                          isEs
+                            ? 'Confianza: ${confidence.toStringAsFixed(1)}%'
+                            : 'Confidence: ${confidence.toStringAsFixed(1)}%',
+                          style: BioSenseText.caption.copyWith(
+                            color: BioSenseColor.primary,
+                            fontWeight: FontWeight.w700)),
+                      ]))),
+                    const SizedBox(width: BioSenseSpacing.sm),
+                    Expanded(child: Container(
+                      padding: const EdgeInsets.all(BioSenseSpacing.sm),
+                      decoration: BoxDecoration(
+                        color: qualityColor.withOpacity(0.06),
+                        borderRadius: BorderRadius.circular(BioSenseRadius.sm),
+                        border: Border.all(
+                          color: qualityColor.withOpacity(0.20))),
+                      child: Row(children: [
+                        Icon(Icons.signal_cellular_alt_outlined,
+                          color: qualityColor, size: 14),
+                        const SizedBox(width: 6),
+                        Text(
+                          isEs
+                            ? 'Señal: $quality'
+                            : 'Signal: $quality',
+                          style: BioSenseText.caption.copyWith(
+                            color: qualityColor,
+                            fontWeight: FontWeight.w700)),
+                      ]))),
+                  ]);
                 }),
                 const SizedBox(height: BioSenseSpacing.sm),
                 Text(
