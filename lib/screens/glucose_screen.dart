@@ -683,7 +683,6 @@ class _GlucoseCurvePainter extends CustomPainter {
       // Trazar segmentos punteados
       final dx = nx - prevX;
       final dy = ny - prevY;
-      final dist = (dx*dx + dy*dy) < 0.001 ? 1.0 : (dx*dx + dy*dy);
       // Simplificado: dash cada 8px
       double seg = 0;
       bool draw = true;
