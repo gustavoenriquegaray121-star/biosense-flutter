@@ -6,7 +6,6 @@
 
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../providers/app_state_provider.dart';
 import '../design/biosense_theme.dart';
@@ -685,8 +684,6 @@ class _GlucoseCurvePainter extends CustomPainter {
       final dx = nx - prevX;
       final dy = ny - prevY;
       final dist = (dx*dx + dy*dy) < 0.001 ? 1.0 : (dx*dx + dy*dy);
-      final len = dist == 1.0 ? 0.0 : (dx*dx + dy*dy) > 0 ? 
-        (dx.abs() + dy.abs()) / 2 : 1.0;
       // Simplificado: dash cada 8px
       double seg = 0;
       bool draw = true;
