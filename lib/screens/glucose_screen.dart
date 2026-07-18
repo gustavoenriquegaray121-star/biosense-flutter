@@ -6,6 +6,7 @@
 
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../providers/app_state_provider.dart';
 import '../design/biosense_theme.dart';
@@ -39,8 +40,16 @@ class _GlucoseScreenState extends State<GlucoseScreen>
   bool   _isCalibrated     = false;
   final  _calibCtrl        = TextEditingController();
 
-  final int    _fitnessWinner  = 2;
-  final List<int> _fitnessScores = [180, 160, 220, 210, 195];
+  int    _fitnessWinner  = 2;
+  List<int> _fitnessScores = [180, 160, 220, 210, 195];
+
+  // Animación canal C3 NIR
+  double _c3Pulse = 0.5;
+  bool   _c3Increasing = true;
+
+  // Predicción +30min (horizonte PHSE)
+  List<double> _glucosePrediction = List.generate(18, (i) => 98.5);
+  String _predictionRisk = 'stable';
 
   Timer? _updateTimer;
 
@@ -60,6 +69,32 @@ class _GlucoseScreenState extends State<GlucoseScreen>
         _currentGlucose = _currentGlucose.clamp(60.0, 300.0);
         _glucoseHistory.removeAt(0);
         _glucoseHistory.add(_currentGlucose);
+
+        // Pulso animado C3 NIR (canal ganador)
+        if (_fitnessWinner == 2) {
+          if (_c3Increasing) {
+            _c3Pulse += 0.08;
+            if (_c3Pulse >= 1.0) _c3Increasing = false;
+          } else {
+            _c3Pulse -= 0.08;
+            if (_c3Pulse <= 0.4) _c3Increasing = true;
+          }
+        }
+
+        // Predicción +30min basada en tendencia
+        final trend = _glucoseHistory.length > 5
+          ? (_glucoseHistory.last - _glucoseHistory[_glucoseHistory.length - 5]) / 5
+          : 0.0;
+        _glucosePrediction = List.generate(18, (i) =>
+          (_currentGlucose + trend * (i + 1) * 2).clamp(40.0, 400.0));
+
+        // Riesgo predictivo
+        final futureMin = _glucosePrediction.reduce((a,b) => a < b ? a : b);
+        final futureMax = _glucosePrediction.reduce((a,b) => a > b ? a : b);
+        if (futureMin < 70) _predictionRisk = 'hypo';
+        else if (futureMax > 180) _predictionRisk = 'hyper';
+        else if (trend.abs() > 2.0) _predictionRisk = 'trending';
+        else _predictionRisk = 'stable';
       });
     });
   }
@@ -306,14 +341,47 @@ class _GlucoseScreenState extends State<GlucoseScreen>
                   Icon(Icons.show_chart_outlined, color: color, size: 18),
                   const SizedBox(width: 8),
                   Text(
-                    isEs ? 'CURVA GLUCÉMICA 24H' : 'GLYCEMIC CURVE 24H',
+                    isEs ? 'CURVA GLUCÉMICA 24H + PREDICCIÓN 30min' : 'GLYCEMIC CURVE 24H + 30min PREDICTION',
                     style: BioSenseText.label.copyWith(color: color)),
                 ]),
+                const SizedBox(height: BioSenseSpacing.sm),
+                // Badge de riesgo predictivo
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: _predictionRisk == 'stable'
+                      ? BioSenseColor.stable.withOpacity(0.10)
+                      : BioSenseColor.warning.withOpacity(0.12),
+                    borderRadius: BorderRadius.circular(BioSenseRadius.full),
+                    border: Border.all(
+                      color: _predictionRisk == 'stable'
+                        ? BioSenseColor.stable.withOpacity(0.3)
+                        : BioSenseColor.warning.withOpacity(0.4))),
+                  child: Text(
+                    _predictionRisk == 'stable'
+                      ? (isEs ? 'Riesgo: Estable' : 'Risk: Stable')
+                      : _predictionRisk == 'hypo'
+                        ? (isEs ? 'Riesgo: Tendencia a hipoglucemia' : 'Risk: Hypoglycemia trend')
+                        : (isEs ? 'Riesgo: Glucosa en ascenso' : 'Risk: Rising glucose'),
+                    style: BioSenseText.caption.copyWith(
+                      color: _predictionRisk == 'stable'
+                        ? BioSenseColor.stable : BioSenseColor.warning,
+                      fontWeight: FontWeight.w700)),
+                ),
                 const SizedBox(height: BioSenseSpacing.md),
                 SizedBox(
-                  height: 100,
-                  child: BioSenseTheme.sparkline(
-                    data: _glucoseHistory, color: color, height: 100)),
+                  height: 110,
+                  child: CustomPaint(
+                    size: const Size(double.infinity, 110),
+                    painter: _GlucoseCurvePainter(
+                      history: _glucoseHistory,
+                      prediction: _glucosePrediction,
+                      color: color,
+                      predColor: _predictionRisk == 'stable'
+                        ? BioSenseColor.stable : BioSenseColor.warning,
+                    ),
+                  ),
+                ),
                 const SizedBox(height: BioSenseSpacing.sm),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -325,6 +393,11 @@ class _GlucoseScreenState extends State<GlucoseScreen>
                   Text(isEs ? 'Ahora' : 'Now',
                     style: BioSenseText.caption.copyWith(
                       color: color, fontWeight: FontWeight.w700)),
+                  Text(isEs ? '+30min' : '+30min',
+                    style: BioSenseText.caption.copyWith(
+                      color: _predictionRisk == 'stable'
+                        ? BioSenseColor.stable : BioSenseColor.warning,
+                      fontStyle: FontStyle.italic)),
                 ]),
                 const SizedBox(height: BioSenseSpacing.md),
                 Row(children: [
@@ -523,6 +596,124 @@ class _GlucoseScreenState extends State<GlucoseScreen>
       ),
     );
   }
+}
+
+
+// ── Painter: curva histórica sólida + predicción punteada
+class _GlucoseCurvePainter extends CustomPainter {
+  final List<double> history;
+  final List<double> prediction;
+  final Color color;
+  final Color predColor;
+
+  const _GlucoseCurvePainter({
+    required this.history,
+    required this.prediction,
+    required this.color,
+    required this.predColor,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (history.isEmpty) return;
+
+    final allData = [...history, ...prediction];
+    final minVal = allData.reduce((a,b) => a < b ? a : b).clamp(40.0, 400.0);
+    final maxVal = allData.reduce((a,b) => a > b ? a : b).clamp(40.0, 400.0);
+    final range  = (maxVal - minVal).abs() < 1.0 ? 50.0 : maxVal - minVal;
+
+    double toY(double v) =>
+      size.height - ((v - minVal) / range) * size.height * 0.80 - size.height * 0.10;
+
+    final totalPoints = history.length + prediction.length;
+    double toX(int idx) => (idx / (totalPoints - 1)) * size.width;
+
+    // Relleno historia
+    final fillPaint = Paint()
+      ..color = color.withOpacity(0.08)
+      ..style = PaintingStyle.fill;
+    final fillPath = Path();
+    fillPath.moveTo(toX(0), size.height);
+    for (int i = 0; i < history.length; i++) {
+      fillPath.lineTo(toX(i), toY(history[i]));
+    }
+    fillPath.lineTo(toX(history.length - 1), size.height);
+    fillPath.close();
+    canvas.drawPath(fillPath, fillPaint);
+
+    // Línea historia — sólida
+    final histPaint = Paint()
+      ..color = color
+      ..strokeWidth = 2.0
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round
+      ..strokeJoin = StrokeJoin.round;
+    final histPath = Path();
+    for (int i = 0; i < history.length; i++) {
+      if (i == 0) histPath.moveTo(toX(i), toY(history[i]));
+      else histPath.lineTo(toX(i), toY(history[i]));
+    }
+    canvas.drawPath(histPath, histPaint);
+
+    // Punto "Ahora"
+    canvas.drawCircle(
+      Offset(toX(history.length - 1), toY(history.last)),
+      5, Paint()..color = color..style = PaintingStyle.fill);
+    canvas.drawCircle(
+      Offset(toX(history.length - 1), toY(history.last)),
+      5, Paint()
+        ..color = Colors.white
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1.5);
+
+    // Línea predicción — punteada
+    final predPaint = Paint()
+      ..color = predColor.withOpacity(0.7)
+      ..strokeWidth = 1.5
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round;
+
+    double x = toX(history.length - 1);
+    final predStartY = toY(history.last);
+    double prevX = x;
+    double prevY = predStartY;
+
+    for (int i = 0; i < prediction.length; i++) {
+      final nx = toX(history.length + i);
+      final ny = toY(prediction[i]);
+      // Trazar segmentos punteados
+      final dx = nx - prevX;
+      final dy = ny - prevY;
+      final dist = (dx*dx + dy*dy) < 0.001 ? 1.0 : (dx*dx + dy*dy);
+      final len = dist == 1.0 ? 0.0 : (dx*dx + dy*dy) > 0 ? 
+        (dx.abs() + dy.abs()) / 2 : 1.0;
+      // Simplificado: dash cada 8px
+      double seg = 0;
+      bool draw = true;
+      double cx2 = prevX, cy2 = prevY;
+      while (seg < (nx - prevX).abs().clamp(1, 200)) {
+        final ratio = seg / (nx - prevX).abs().clamp(1, 200);
+        final ex = prevX + dx * ratio;
+        final ey = prevY + dy * ratio;
+        if (draw) canvas.drawLine(Offset(cx2, cy2), Offset(ex, ey), predPaint);
+        cx2 = ex; cy2 = ey;
+        seg += 6;
+        draw = !draw;
+      }
+      prevX = nx; prevY = ny;
+    }
+
+    // Punto final predicción
+    if (prediction.isNotEmpty) {
+      canvas.drawCircle(
+        Offset(toX(history.length + prediction.length - 1), toY(prediction.last)),
+        3, Paint()..color = predColor.withOpacity(0.6)..style = PaintingStyle.fill);
+    }
+  }
+
+  @override
+  bool shouldRepaint(_GlucoseCurvePainter old) =>
+    old.history != history || old.prediction != prediction;
 }
 
 enum _GlucoseStatus { hypo, normal, pre, high, hyper }
