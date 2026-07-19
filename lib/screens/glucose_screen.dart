@@ -187,11 +187,18 @@ class _GlucoseScreenState extends State<GlucoseScreen>
           ),
         ],
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(BioSenseSpacing.xl),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
+      body: AnimatedContainer(
+        duration: BioSenseMotion.slow,
+        color: _predictionRisk == 'hypo'
+          ? const Color(0xFF3498DB).withOpacity(0.05)
+          : _predictionRisk == 'hyper'
+            ? BioSenseColor.alert.withOpacity(0.04)
+            : Colors.transparent,
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(BioSenseSpacing.xl),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
 
             // ── ADVERTENCIA CLÍNICA
             Container(
@@ -292,17 +299,23 @@ class _GlucoseScreenState extends State<GlucoseScreen>
                     arrowColor = BioSenseColor.alert;
                     deltaStr = '${trend.toStringAsFixed(1)} mg/dL';
                   }
-                  return Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                    Icon(arrow, color: arrowColor, size: 20),
-                    const SizedBox(width: 6),
-                    Text(deltaStr,
-                      style: TextStyle(
-                        fontFamily: 'Inter', fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: arrowColor)),
-                  ]);
+                  final bool shouldBlink = _predictionRisk == 'hypo' ||
+                    _predictionRisk == 'hyper';
+                  return AnimatedOpacity(
+                    opacity: shouldBlink ? _c3Pulse : 1.0,
+                    duration: const Duration(milliseconds: 300),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                      Icon(arrow, color: arrowColor, size: 22),
+                      const SizedBox(width: 6),
+                      Text(deltaStr,
+                        style: TextStyle(
+                          fontFamily: 'Inter', fontSize: 15,
+                          fontWeight: FontWeight.w700,
+                          color: arrowColor)),
+                    ]),
+                  );
                 }),
                 const SizedBox(height: BioSenseSpacing.md),
                 Container(
@@ -694,7 +707,8 @@ class _GlucoseScreenState extends State<GlucoseScreen>
             ),
             const SizedBox(height: BioSenseSpacing.xxl),
             BioSenseTheme.institutionalFooter(),
-          ],
+            ],
+          ),
         ),
       ),
     );
