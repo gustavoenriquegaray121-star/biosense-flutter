@@ -32,8 +32,8 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
     ClinicalSummaryScreen(),
     FamilyGuardianScreen(),
     TipsScreen(),
-    SettingsScreen(),
     const GlucoseScreen(),
+    SettingsScreen(),
   ];
 
   @override
@@ -67,10 +67,10 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
               isEs ? 'Red' : 'Network'),
             _dest(Icons.recommend_outlined,
               isEs ? 'Consejos' : 'Tips'),
-            _dest(Icons.tune_outlined,
-              isEs ? 'Config.' : 'Config.'),
             _dest(Icons.bloodtype_outlined,
               isEs ? 'Glucosa' : 'Glucose'),
+            _dest(Icons.tune_outlined,
+              isEs ? 'Config.' : 'Config.'),
           ],
         ),
       ),
