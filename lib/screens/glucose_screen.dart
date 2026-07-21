@@ -109,7 +109,7 @@ class _GlucoseScreenState extends State<GlucoseScreen>
   _GlucoseStatus get _status {
     if (_currentGlucose < 70)  return _GlucoseStatus.hypo;
     if (_currentGlucose < 100) return _GlucoseStatus.normal;
-    if (_currentGlucose < 126) return _GlucoseStatus.pre;
+    if (_currentGlucose < 126) return _GlucoseStatus.pre;  // OMS/SS-MX: >=100 en ayunas
     if (_currentGlucose < 180) return _GlucoseStatus.high;
     return _GlucoseStatus.hyper;
   }
@@ -146,8 +146,8 @@ class _GlucoseScreenState extends State<GlucoseScreen>
           : 'Glucose in optimal range. No intervention required.';
       case _GlucoseStatus.pre:
         return isEs
-          ? 'Tendencia elevada detectada. Revisar dieta y actividad.'
-          : 'Elevated trend detected. Review diet and activity.';
+          ? 'Estable en este momento, pero con tendencia elevada detectada. Revisar dieta y actividad.'
+          : 'Stable at this moment, but elevated trend detected. Review diet and activity.';
       case _GlucoseStatus.high:
         return isEs
           ? 'Glucosa elevada. Monitoreo continuo activo.'
@@ -369,10 +369,10 @@ class _GlucoseScreenState extends State<GlucoseScreen>
                   range: '< 70', color: const Color(0xFF3498DB),
                   active: _status == _GlucoseStatus.hypo),
                 _RangeBar(label: isEs ? 'Normal' : 'Normal',
-                  range: '70–99', color: BioSenseColor.stable,
+                  range: '70-99', color: BioSenseColor.stable,
                   active: _status == _GlucoseStatus.normal),
-                _RangeBar(label: isEs ? 'Prediabetes' : 'Prediabetes',
-                  range: '100–125', color: BioSenseColor.warning,
+                _RangeBar(label: isEs ? 'Prediabetes (OMS/SS-MX: >=100 ayunas)' : 'Prediabetes (WHO: >=100 fasting)',
+                  range: '100-125', color: BioSenseColor.warning,
                   active: _status == _GlucoseStatus.pre),
                 _RangeBar(label: isEs ? 'Diabetes' : 'Diabetes',
                   range: '126–179', color: BioSenseColor.alert,
@@ -413,10 +413,10 @@ class _GlucoseScreenState extends State<GlucoseScreen>
                         : BioSenseColor.warning.withOpacity(0.4))),
                   child: Text(
                     _predictionRisk == 'stable'
-                      ? (isEs ? 'Riesgo: Estable' : 'Risk: Stable')
+                      ? (isEs ? 'Riesgo: Estable  (+/-8 mg/dL)' : 'Risk: Stable  (+/-8 mg/dL)')
                       : _predictionRisk == 'hypo'
-                        ? (isEs ? 'Riesgo: Tendencia a hipoglucemia' : 'Risk: Hypoglycemia trend')
-                        : (isEs ? 'Riesgo: Glucosa en ascenso' : 'Risk: Rising glucose'),
+                        ? (isEs ? 'Riesgo: Tendencia a hipoglucemia  (+/-8 mg/dL)' : 'Risk: Hypoglycemia trend  (+/-8 mg/dL)')
+                        : (isEs ? 'Riesgo: Glucosa en ascenso  (+/-8 mg/dL)' : 'Risk: Rising glucose  (+/-8 mg/dL)'),
                     style: BioSenseText.caption.copyWith(
                       color: _predictionRisk == 'stable'
                         ? BioSenseColor.stable : BioSenseColor.warning,
