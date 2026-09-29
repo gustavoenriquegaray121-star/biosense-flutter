@@ -25,7 +25,7 @@
 #define PIN_LED 8
 #define PIN_VELCRO_LED 10
 #define PIN_BAT 3
-#define PIN_VIB_MOTOR 5  // Pin asignado al motor de vibracion haptico
+#define PIN_VIB_MOTOR 5  // Pin asignado al motor de vibración háptico
 
 #define ADDR_MLX90614 0x5A
 #define ADDR_MPU6050 0x68
@@ -39,7 +39,7 @@
 #define PHOENIX_EXIT 0.40f
 #define PHOENIX_TIMEOUT_MS 30000
 
-#define GREEN_INTERVAL 60000   // 1 minuto para confirmacion discreta en verde
+#define GREEN_INTERVAL 60000   // 1 minuto para confirmación discreta en verde
 #define YELLOW_INTERVAL 30000  // 30 segundos para doble destello de advertencia
 
 enum SensorFlags : uint8_t {
@@ -178,7 +178,7 @@ void handleSemaforoLED() {
     case ALERT_YELLOW:
       digitalWrite(PIN_VIB_MOTOR, LOW); // Motor apagado
       if (now - lastYellowBlink > YELLOW_INTERVAL) {
-        // patron del doble destello "pum pum"
+        // Patrón del doble destello "pum pum"
         if (yellowBlinkStep == 0) {
           digitalWrite(PIN_LED, HIGH);
           ledState = true;
@@ -205,7 +205,7 @@ void handleSemaforoLED() {
       break;
 
     case ALERT_RED:
-      // Alerta sostenida: LED prendido continuo y motor de vibracion activo
+      // Alerta sostenida: LED encendido continuo y motor de vibración activo
       digitalWrite(PIN_LED, HIGH);
       digitalWrite(PIN_VIB_MOTOR, HIGH);
       ledState = true;
@@ -251,12 +251,12 @@ void checkPhoenixRebirth(PHSE_State &engine){
 
 class EpochCallbacks : public BLECharacteristicCallbacks {
   void onWrite(BLECharacteristic* pChar) override {
-    std::string v=pChar->getValue();
-    if(v.length()>=4){
-      uint32_t epoch=(uint32_t)((uint8_t)v[0]|((uint8_t)v[1]<<8)|((uint8_t)v[2]<<16)|((uint8_t)v[3]<<24));
-      epoch_offset=epoch-(millis()/1000);
-      prefs.begin("darwin",false);
-      prefs.putUInt("epoch",epoch_offset);
+    String val = pChar->getValue();
+    if (val.length() >= 4) {
+      uint32_t epoch = (uint32_t)((uint8_t)val[0] | ((uint8_t)val[1] << 8) | ((uint8_t)val[2] << 16) | ((uint8_t)val[3] << 24));
+      epoch_offset = epoch - (millis() / 1000);
+      prefs.begin("darwin", false);
+      prefs.putUInt("epoch", epoch_offset);
       prefs.end();
     }
   }
