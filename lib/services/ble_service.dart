@@ -1,34 +1,45 @@
 // ============================================================
-// PHSE Altea Garay — BLE Service v2.2
+// PHSE Altea Garay — BLE Service v3.0
 //
-// Protocolo v9
-// Paquete: 44 bytes
+// Compatible con flutter_blue_plus 1.14.0
+// Protocolo BioSense v9 — 44 bytes
 //
-// Fragmento:
-//   bytes 0-3 : sequenceNumber LE uint32
-//   byte  4   : fragment index
-//   byte  5   : total fragments
-//   bytes 6+  : payload máximo 14 bytes
+// Capas:
+//   BLE -> fragment reassembler -> decoder -> rawMetricsStream
 //
+// IMPORTANTE:
+//   No modifica el protocolo v9.
 // ============================================================
 
 import 'dart:async';
+import 'dart:math' as math;
 import 'dart:typed_data';
 
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 
-import 'biosense_decoder.dart';
+import '../core/biosense_decoder.dart';
 
-enum BleConnectionState {
+// ============================================================
+// Estado de conexión
+// ============================================================
+
+enum BleConnectionStatus {
   disconnected,
   scanning,
   connecting,
   connected,
 }
 
+// Compatibilidad con cualquier código antiguo que pudiera
+// referirse al nombre anterior.
+typedef BleConnectionState = BleConnectionStatus;
+
+// ============================================================
+// Servicio BLE
+// ============================================================
+
 class BleService {
-  static const String deviceName =
-      'BioSense-Band';
+  static const String deviceName = 'BioSense-Band';
 
   static const String serviceUuid =
       'A17EA550-1A1D-4C8D-8A9E-D18A3B5C2F4E';
@@ -39,242 +50,250 @@ class BleService {
   static const String epochUuid =
       'C206F56F-3B8E-4D9B-AF4F-B2C3D4E5F6A';
 
-  // ── Streams ─────────────────────────────────────────────
+  // ==========================================================
+  // Streams públicos
+  // ==========================================================
 
-  final _stateCtrl =
-      StreamController<BleConnectionState>.broadcast();
+  final StreamController<BleConnectionStatus> _statusCtrl =
+      StreamController<BleConnectionStatus>.broadcast();
 
-  final _packetCtrl =
+  final StreamController<BioSensePacket> _packetCtrl =
       StreamController<BioSensePacket>.broadcast();
 
-  Stream<BleConnectionState>
-      get stateStream =>
-          _stateCtrl.stream;
+  final StreamController<Map<String, double>> _rawMetricsCtrl =
+      StreamController<Map<String, double>>.broadcast();
 
-  Stream<BioSensePacket>
-      get packetStream =>
-          _packetCtrl.stream;
+  Stream<BleConnectionStatus> get statusStream => _statusCtrl.stream;
 
-  // ── Estado ──────────────────────────────────────────────
+  Stream<BioSensePacket> get packetStream => _packetCtrl.stream;
 
-  BleConnectionState _state =
-      BleConnectionState.disconnected;
+  Stream<Map<String, double>> get rawMetricsStream =>
+      _rawMetricsCtrl.stream;
+
+  // ==========================================================
+  // Estado
+  // ==========================================================
+
+  BleConnectionStatus _status =
+      BleConnectionStatus.disconnected;
 
   BluetoothDevice? _device;
 
-  StreamSubscription?
-      _scanSub;
+  StreamSubscription<List<ScanResult>>? _scanSub;
+  StreamSubscription<BluetoothConnectionState>? _connSub;
+  StreamSubscription<List<int>>? _notifySub;
 
-  StreamSubscription?
-      _connSub;
-
-  StreamSubscription?
-      _notifySub;
-
-  // ── Reensamblador único ─────────────────────────────────
-
-  final BleFragmentReassembler
-      _reassembler =
+  final BleFragmentReassembler _reassembler =
       BleFragmentReassembler();
 
-  BleConnectionState get state =>
-      _state;
+  // ==========================================================
+  // Mock
+  // ==========================================================
 
-  // ========================================================
-  // Estado
-  // ========================================================
+  Timer? _mockTimer;
+  double _mockPerturbation = 0.0;
+  int _mockSequence = 0;
 
-  void _setState(
-      BleConnectionState state) {
-    if (_state == state) {
+  // ==========================================================
+  // Getters
+  // ==========================================================
+
+  BleConnectionStatus get status => _status;
+
+  // Compatibilidad con código antiguo.
+  BleConnectionStatus get state => _status;
+
+  // ==========================================================
+  // Estado interno
+  // ==========================================================
+
+  void _setStatus(BleConnectionStatus status) {
+    if (_status == status) {
       return;
     }
 
-    _state = state;
-    _stateCtrl.add(state);
+    _status = status;
+    _statusCtrl.add(status);
   }
 
-  // ========================================================
-  // Conexión
-  // ========================================================
+  // ==========================================================
+  // API esperada por HealthRepository
+  // ==========================================================
+
+  Future<void> startScan() async {
+    await connect();
+  }
+
+  Future<void> disconnectDevice() async {
+    await disconnect();
+  }
+
+  // ==========================================================
+  // Conexión BLE
+  // ==========================================================
 
   Future<void> connect() async {
-    if (_state !=
-        BleConnectionState.disconnected) {
+    if (_status != BleConnectionStatus.disconnected) {
       return;
     }
 
     _reassembler.reset();
 
-    _setState(
-      BleConnectionState.scanning,
-    );
+    _setStatus(BleConnectionStatus.scanning);
 
     try {
-      await FlutterBluePlus.startScan(
-        withNames: [deviceName],
-        timeout:
-            const Duration(seconds: 15),
-      );
-
       await _scanSub?.cancel();
+      _scanSub = null;
 
-      _scanSub =
-          FlutterBluePlus.scanResults.listen(
-        (results) async {
-          if (results.isEmpty) {
-            return;
-          }
-
-          // Tomamos el primer dispositivo
-          // cuyo nombre coincida.
-          ScanResult? target;
-
-          for (final result in results) {
-            if (result.device.platformName ==
-                deviceName) {
-              target = result;
-              break;
-            }
-
-            if (result.advertisementData
-                    .advName ==
-                deviceName) {
-              target = result;
-              break;
-            }
-          }
-
-          if (target == null) {
-            return;
-          }
-
-          await _scanSub?.cancel();
-          _scanSub = null;
-
-          await FlutterBluePlus.stopScan();
-
-          _device = target.device;
-
-          _setState(
-            BleConnectionState.connecting,
-          );
-
-          await _connectDevice(
-            target.device,
-          );
+      // flutter_blue_plus 1.14.0 NO tiene withNames.
+      // Escaneamos y filtramos manualmente por localName.
+      _scanSub = FlutterBluePlus.scanResults.listen(
+        (results) {
+          _findAndConnect(results);
+        },
+        onError: (_) {
+          _handleConnectionFailure();
         },
       );
-    } catch (_) {
-      await FlutterBluePlus.stopScan();
 
-      _setState(
-        BleConnectionState.disconnected,
+      await FlutterBluePlus.startScan(
+        timeout: const Duration(seconds: 15),
       );
+    } catch (_) {
+      await _handleConnectionFailure();
     }
   }
 
-  // ========================================================
-  // Conectar dispositivo
-  // ========================================================
+  Future<void> _findAndConnect(
+    List<ScanResult> results,
+  ) async {
+    if (_status != BleConnectionStatus.scanning) {
+      return;
+    }
+
+    ScanResult? target;
+
+    for (final result in results) {
+      final deviceNameFromPlatform =
+          result.device.localName.trim();
+
+      final deviceNameFromAdvertisement =
+          result.advertisementData.localName.trim();
+
+      if (deviceNameFromPlatform == deviceName ||
+          deviceNameFromAdvertisement == deviceName) {
+        target = result;
+        break;
+      }
+    }
+
+    if (target == null) {
+      return;
+    }
+
+    await _scanSub?.cancel();
+    _scanSub = null;
+
+    try {
+      await FlutterBluePlus.stopScan();
+    } catch (_) {}
+
+    _device = target.device;
+
+    _setStatus(BleConnectionStatus.connecting);
+
+    await _connectDevice(target.device);
+  }
 
   Future<void> _connectDevice(
-      BluetoothDevice device) async {
+    BluetoothDevice device,
+  ) async {
     try {
       await device.connect(
         autoConnect: false,
       );
 
-      _setState(
-        BleConnectionState.connected,
-      );
-
       await _connSub?.cancel();
 
-      _connSub =
-          device.connectionState.listen(
+      _connSub = device.connectionState.listen(
         (state) {
           if (state ==
-              BluetoothConnectionState
-                  .disconnected) {
+              BluetoothConnectionState.disconnected) {
             _reassembler.reset();
 
-            _setState(
-              BleConnectionState
-                  .disconnected,
+            _setStatus(
+              BleConnectionStatus.disconnected,
             );
           }
         },
       );
 
-      await _setupNotifications(
-        device,
-      );
+      await _setupNotifications(device);
+
+      _setStatus(BleConnectionStatus.connected);
     } catch (_) {
       _reassembler.reset();
 
-      _setState(
-        BleConnectionState.disconnected,
+      _setStatus(
+        BleConnectionStatus.disconnected,
       );
     }
   }
 
-  // ========================================================
-  // Descubrir servicios y características
-  // ========================================================
+  // ==========================================================
+  // Servicios / características
+  // ==========================================================
 
   Future<void> _setupNotifications(
-      BluetoothDevice device) async {
-    final services =
-        await device.discoverServices();
+    BluetoothDevice device,
+  ) async {
+    final services = await device.discoverServices();
+
+    bool dataCharacteristicFound = false;
 
     for (final service in services) {
-      if (service.uuid
-              .toString()
-              .toUpperCase() !=
-          serviceUuid.toUpperCase()) {
+      final serviceId =
+          service.uuid.toString().toUpperCase();
+
+      if (serviceId != serviceUuid.toUpperCase()) {
         continue;
       }
 
       for (final characteristic
           in service.characteristics) {
-        final uuid = characteristic.uuid
-            .toString()
-            .toUpperCase();
+        final uuid =
+            characteristic.uuid.toString().toUpperCase();
 
-        // ── Datos BioSense ────────────────────────────────
+        // ----------------------------------------------------
+        // Característica de datos BioSense
+        // ----------------------------------------------------
 
-        if (uuid ==
-            charUuid.toUpperCase()) {
-          await characteristic
-              .setNotifyValue(true);
+        if (uuid == charUuid.toUpperCase()) {
+          await characteristic.setNotifyValue(true);
 
           await _notifySub?.cancel();
 
           _notifySub =
-              characteristic
-                  .onValueReceived
-                  .listen(
+              characteristic.onValueReceived.listen(
             _onFragment,
           );
+
+          dataCharacteristicFound = true;
         }
 
-        // ── Sincronización epoch ──────────────────────────
+        // ----------------------------------------------------
+        // Sincronización de epoch
+        // ----------------------------------------------------
 
-        if (uuid ==
-            epochUuid.toUpperCase()) {
+        if (uuid == epochUuid.toUpperCase()) {
           final epoch =
               DateTime.now()
                       .millisecondsSinceEpoch ~/
                   1000;
 
-          final bytes =
-              Uint8List(4);
+          final bytes = Uint8List(4);
 
-          final bd =
-              ByteData.sublistView(
-            bytes,
-          );
+          final bd = ByteData.sublistView(bytes);
 
           bd.setUint32(
             0,
@@ -289,65 +308,159 @@ class BleService {
         }
       }
     }
+
+    if (!dataCharacteristicFound) {
+      throw StateError(
+        'BioSense data characteristic not found',
+      );
+    }
   }
 
-  // ========================================================
+  // ==========================================================
   // Recepción BLE
-  // ========================================================
+  // ==========================================================
 
-  void _onFragment(
-      List<int> raw) {
-    // ── Paquete completo ──────────────────────────────────
-    //
-    // Permite que el firmware envíe directamente
-    // los 44 bytes cuando el MTU lo permita.
-
+  void _onFragment(List<int> raw) {
     if (raw.length == 44) {
       _tryDecode(
         Uint8List.fromList(raw),
       );
-
       return;
     }
 
-    // ── Fragmento ─────────────────────────────────────────
-
-    final assembled =
-        _reassembler.feed(raw);
+    final assembled = _reassembler.feed(raw);
 
     if (assembled == null) {
       return;
     }
 
-    _tryDecode(
-      Uint8List.fromList(
-        assembled,
-      ),
-    );
+    _tryDecode(assembled);
   }
 
-  // ========================================================
+  // ==========================================================
   // Decoder
-  // ========================================================
+  // ==========================================================
 
-  void _tryDecode(
-      Uint8List data) {
-    final packet =
-        BioSenseDecoder.decode(data);
+  void _tryDecode(Uint8List data) {
+    final packet = BioSenseDecoder.decode(data);
 
     if (packet == null) {
       return;
     }
 
     _packetCtrl.add(packet);
+
+    _emitRawMetrics(packet);
   }
 
-  // ========================================================
+  // ==========================================================
+  // Adaptador BioSensePacket -> HealthRepository
+  // ==========================================================
+  //
+  // El protocolo v9 contiene HRV y temperatura, pero NO tiene
+  // campos explícitos llamados "resp" y "gsr".
+  //
+  // Por eso NO vamos a inventar una correspondencia fisiológica.
+  //
+  // Para evitar contaminar el motor DHSI con datos falsos,
+  // usamos los valores disponibles del paquete solamente para
+  // los canales que realmente existen y mantenemos resp/gsr
+  // en 1.0 hasta que el contrato del protocolo defina esos
+  // canales.
+  //
+  // Esto permite compilar y mantener la arquitectura limpia.
+  // ==========================================================
+
+  void _emitRawMetrics(BioSensePacket packet) {
+    _rawMetricsCtrl.add({
+      'hrv': packet.hrv,
+      'temp': packet.temperature,
+      'resp': 1.0,
+      'gsr': 1.0,
+    });
+  }
+
+  // ==========================================================
+  // MOCK MODE
+  // ==========================================================
+
+  Future<void> startMockMode({
+    double perturbation = 0.0,
+  }) async {
+    _mockPerturbation = perturbation;
+
+    await _stopMockTimer();
+
+    _reassembler.reset();
+
+    _setStatus(BleConnectionStatus.connected);
+
+    _mockTimer = Timer.periodic(
+      const Duration(seconds: 1),
+      (_) {
+        _emitMockMetrics();
+      },
+    );
+
+    _emitMockMetrics();
+  }
+
+  void setMockPerturbation(double perturbation) {
+    _mockPerturbation = perturbation;
+  }
+
+  void _emitMockMetrics() {
+    final p = _mockPerturbation;
+
+    // Variación pequeña para evitar una señal completamente
+    // estática durante el modo de prueba.
+    final wave =
+        math.sin(_mockSequence * 0.15) * 0.01;
+
+    _mockSequence++;
+
+    _rawMetricsCtrl.add({
+      'hrv': 1.0 + p + wave,
+      'temp': 1.0 + (p * 0.5) + wave,
+      'resp': 1.0 + p + wave,
+      'gsr': 1.0 + p + wave,
+    });
+  }
+
+  Future<void> _stopMockTimer() async {
+    _mockTimer?.cancel();
+    _mockTimer = null;
+  }
+
+  // ==========================================================
+  // Error de conexión
+  // ==========================================================
+
+  Future<void> _handleConnectionFailure() async {
+    try {
+      await FlutterBluePlus.stopScan();
+    } catch (_) {}
+
+    await _scanSub?.cancel();
+    _scanSub = null;
+
+    _reassembler.reset();
+
+    _setStatus(
+      BleConnectionStatus.disconnected,
+    );
+  }
+
+  // ==========================================================
   // Desconexión
-  // ========================================================
+  // ==========================================================
 
   Future<void> disconnect() async {
-    await FlutterBluePlus.stopScan();
+    await _stopMockTimer();
+
+    try {
+      await FlutterBluePlus.stopScan();
+    } catch (_) {}
 
     await _scanSub?.cancel();
     _scanSub = null;
@@ -366,19 +479,20 @@ class BleService {
 
     _reassembler.reset();
 
-    _setState(
-      BleConnectionState.disconnected,
+    _setStatus(
+      BleConnectionStatus.disconnected,
     );
   }
 
-  // ========================================================
+  // ==========================================================
   // Dispose
-  // ========================================================
+  // ==========================================================
 
   Future<void> dispose() async {
     await disconnect();
 
-    await _stateCtrl.close();
+    await _statusCtrl.close();
     await _packetCtrl.close();
+    await _rawMetricsCtrl.close();
   }
 }
