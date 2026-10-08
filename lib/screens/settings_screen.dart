@@ -9,6 +9,7 @@ import 'dart:io';
 import 'package:image_picker/image_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../providers/app_state_provider.dart';
+import '../services/ble_service.dart';
 import '../core/localization_manager.dart';
 import '../models/user_profile.dart';
 import '../design/biosense_theme.dart';
@@ -303,30 +304,65 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 color: BioSenseColor.warning.withOpacity(0.06),
                 borderRadius: BorderRadius.circular(BioSenseRadius.md),
                 border: Border.all(color: BioSenseColor.warning.withOpacity(0.30))),
-              child: SwitchListTile(
-                value: _mockMode,
-                onChanged: (v) {
-                  setState(() => _mockMode = v);
-                  if (v) app.connectMockMode();
-                  else app.connectHardware();
-                },
-                activeColor: BioSenseColor.warning,
-                title: Text(
-                  isEs ? 'Modo demostración' : 'Demo mode',
-                  style: BioSenseText.subtitle.copyWith(
-                    color: BioSenseColor.warning)),
-                subtitle: Text(
-                  _mockMode
-                    ? (isEs
-                        ? 'Sin pulsera física — modo demostración activo'
-                        : 'No physical band — demo mode active')
-                    : (isEs
-                        ? 'Buscando pulsera PHSE por Bluetooth...'
-                        : 'Searching for PHSE band via Bluetooth...'),
-                  style: BioSenseText.caption),
-                secondary: Icon(Icons.bluetooth_outlined,
-                  color: BioSenseColor.warning),
-              ),
+              child: Column(children: [
+                SwitchListTile(
+                  value: _mockMode,
+                  onChanged: (v) {
+                    setState(() => _mockMode = v);
+                    if (v) {
+                      app.connectMockMode();
+                    } else {
+                      app.connectHardware();
+                    }
+                  },
+                  activeColor: BioSenseColor.warning,
+                  title: Text(
+                    isEs ? 'Modo demostración' : 'Demo mode',
+                    style: BioSenseText.subtitle.copyWith(
+                      color: BioSenseColor.warning)),
+                  subtitle: Text(
+                    _mockMode
+                      ? (isEs
+                          ? 'Sin pulsera física — modo demostración activo'
+                          : 'No physical band — demo mode active')
+                      : _bleStatusText(app.bleStatus, isEs),
+                    style: BioSenseText.caption),
+                  secondary: Icon(
+                    _mockMode
+                      ? Icons.bluetooth_outlined
+                      : _bleStatusIcon(app.bleStatus),
+                    color: _mockMode
+                      ? BioSenseColor.warning
+                      : _bleStatusColor(app.bleStatus)),
+                ),
+                // Indicador de estado real de la pulsera
+                if (!_mockMode)
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(
+                      BioSenseSpacing.lg, 0, BioSenseSpacing.lg,
+                      BioSenseSpacing.md),
+                    child: Row(children: [
+                      if (app.bleStatus == BleConnectionStatus.scanning ||
+                          app.bleStatus == BleConnectionStatus.connecting)
+                        const SizedBox(
+                          width: 16, height: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2))
+                      else
+                        Icon(Icons.circle, size: 12,
+                          color: _bleStatusColor(app.bleStatus)),
+                      const SizedBox(width: BioSenseSpacing.sm),
+                      Expanded(child: Text(
+                        _bleStatusText(app.bleStatus, isEs),
+                        style: BioSenseText.caption.copyWith(
+                          color: _bleStatusColor(app.bleStatus),
+                          fontWeight: FontWeight.w700))),
+                      if (app.bleStatus == BleConnectionStatus.disconnected)
+                        TextButton(
+                          onPressed: () => app.connectHardware(),
+                          child: Text(isEs ? 'Buscar de nuevo' : 'Search again')),
+                    ]),
+                  ),
+              ]),
             ),
             const SizedBox(height: BioSenseSpacing.xxl),
 
@@ -349,6 +385,47 @@ class _SettingsScreenState extends State<SettingsScreen> {
         ),
       ),
     );
+  }
+
+  String _bleStatusText(BleConnectionStatus s, bool isEs) {
+    switch (s) {
+      case BleConnectionStatus.scanning:
+        return isEs
+          ? 'Buscando pulsera BioSense por Bluetooth...'
+          : 'Searching for BioSense band via Bluetooth...';
+      case BleConnectionStatus.connecting:
+        return isEs ? 'Conectando con la pulsera...' : 'Connecting to band...';
+      case BleConnectionStatus.connected:
+        return isEs ? 'Pulsera conectada' : 'Band connected';
+      case BleConnectionStatus.disconnected:
+        return isEs
+          ? 'Pulsera no conectada. No se encontró la pulsera.'
+          : 'Band not connected. Band not found.';
+    }
+  }
+
+  Color _bleStatusColor(BleConnectionStatus s) {
+    switch (s) {
+      case BleConnectionStatus.scanning:
+      case BleConnectionStatus.connecting:
+        return Colors.orange;
+      case BleConnectionStatus.connected:
+        return Colors.green;
+      case BleConnectionStatus.disconnected:
+        return Colors.red;
+    }
+  }
+
+  IconData _bleStatusIcon(BleConnectionStatus s) {
+    switch (s) {
+      case BleConnectionStatus.scanning:
+      case BleConnectionStatus.connecting:
+        return Icons.bluetooth_searching;
+      case BleConnectionStatus.connected:
+        return Icons.bluetooth_connected;
+      case BleConnectionStatus.disconnected:
+        return Icons.bluetooth_disabled;
+    }
   }
 
   List<_ProfileOption> _profiles(bool isEs) => [
@@ -389,4 +466,4 @@ class _ProfileOption {
   final IconData icon;
   final String label;
   const _ProfileOption(this.profile, this.icon, this.label);
-}             
+}
