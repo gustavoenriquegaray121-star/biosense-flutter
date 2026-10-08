@@ -1,7 +1,7 @@
 // ============================================================
-// BioSense Band — Firmware v5.8.4 Semáforo Háptico
+// BioSense Band - Firmware v5.8.5 Semaforo Haptico
 // PHSE Altea Garay | USPTO #63/914,860
-// Correcciones sintaxis aplicadas — listo para ArduinoDroid
+// ASCII puro - listo para ArduinoDroid / Arduino IDE
 // ============================================================
 #include <BLEDevice.h>
 #include <BLEServer.h>
@@ -15,12 +15,13 @@
 
 #define SERVICE_UUID           "A17EA550-1A1D-4C8D-8A9E-D18A3B5C2F4E"
 #define CHARACTERISTIC_UUID    "B105E45E-2A7D-4C8A-9F3E-A1B2C3D4E5F6"
-#define CHARACTERISTIC_EPOCH_UUID "C206F56F-3B8E-4D9B-AF4F-B2C3D4E5F6A"
+#define CHARACTERISTIC_EPOCH_UUID "C206F56F-3B8E-4D9B-AF4F-B2C3D4E5F6A7"
 #define DEVICE_NAME            "BioSense-Band"
 
 #define PROTOCOL_VERSION  0x09
 #define PACKET_SIZE       44
 #define FRAG_PAYLOAD      14
+#define MIN_TX_INTERVAL_MS 250
 #define DARWIN_ENABLED    false
 #define USE_NIR_CIRCUIT   false
 
@@ -111,6 +112,7 @@ uint16_t winStreak[5]={0};
 
 bool max_ok=false, mlx_ok=false, mpu_ok=false;
 uint8_t sensorFlags=0;
+uint8_t lowBatCount=0;
 
 unsigned long lastMLXRead=0, lastAdvRestart=0, lastBLETX=0;
 unsigned long lastPrefsSave=0, lastSample=0, lastFragTime=0;
@@ -129,7 +131,7 @@ struct FragQueue {
   uint8_t payload;
 } fragQ={false,0,0,{0},0,FRAG_PAYLOAD};
 
-// ── Semáforo ──────────────────────────────────────────────
+// -- Semaforo ----------------------------------------------
 enum AlertLevel { ALERT_GREEN, ALERT_YELLOW, ALERT_RED };
 AlertLevel currentAlert = ALERT_GREEN;
 unsigned long lastGreenBlink=0, lastYellowBlink=0;
@@ -183,7 +185,7 @@ void handleSemaforoLED() {
   }
 }
 
-// ── PHSE Engine ───────────────────────────────────────────
+// -- PHSE Engine -------------------------------------------
 void updatePHSE(PHSE_State &engine, float newValue) {
   engine.filtered_buffer[engine.buf_idx] = newValue;
   engine.buf_idx = (engine.buf_idx + 1) % 10;
@@ -218,16 +220,13 @@ void checkPhoenixRebirth(PHSE_State &engine){
   }
 }
 
-// ── BLE Callbacks ─────────────────────────────────────────
+// -- BLE Callbacks -----------------------------------------
 class EpochCallbacks : public BLECharacteristicCallbacks {
   void onWrite(BLECharacteristic* pChar) override {
     String val = pChar->getValue();
     if (val.length() >= 4) {
       uint32_t epoch = (uint32_t)((uint8_t)val[0]|((uint8_t)val[1]<<8)|((uint8_t)val[2]<<16)|((uint8_t)val[3]<<24));
       epoch_offset = epoch - (millis()/1000);
-      prefs.begin("darwin",false);
-      prefs.putUInt("epoch",epoch_offset);
-      prefs.end();
     }
   }
 };
@@ -245,7 +244,7 @@ class MyServerCallbacks: public BLEServerCallbacks {
   }
 };
 
-// ── CRC32 ─────────────────────────────────────────────────
+// -- CRC32 -------------------------------------------------
 uint32_t crc32(const uint8_t* data, size_t len){
   uint32_t crc=0xFFFFFFFF;
   for(size_t i=0;i<len;i++){
@@ -255,7 +254,7 @@ uint32_t crc32(const uint8_t* data, size_t len){
   return ~crc;
 }
 
-// ── Darwin weights ────────────────────────────────────────
+// -- Darwin weights ----------------------------------------
 void loadDarwinWeights(){
   prefs.begin("darwin",true);
   if(prefs.isKey("w0")){
@@ -264,7 +263,6 @@ void loadDarwinWeights(){
     darwin_weights[2]=prefs.getFloat("w2",0.20f);
     darwin_weights[3]=prefs.getFloat("w3",0.15f);
     darwin_weights[4]=prefs.getFloat("w4",0.10f);
-    epoch_offset=prefs.getUInt("epoch",0);
   }
   prefs.end();
 }
@@ -276,7 +274,6 @@ void saveDarwinWeights(){
   prefs.putFloat("w2",darwin_weights[2]);
   prefs.putFloat("w3",darwin_weights[3]);
   prefs.putFloat("w4",darwin_weights[4]);
-  prefs.putUInt("epoch",epoch_offset);
   prefs.end();
 }
 
@@ -322,12 +319,14 @@ void updateDarwinWeights(){
   }
 }
 
-// ── Sensores ──────────────────────────────────────────────
+// -- Sensores ----------------------------------------------
 void setupSensorMAX(){
   if(!particleSensor.begin(Wire,I2C_SPEED_FAST)){
     max_ok=false;
   } else {
-    particleSensor.setup(0x1F,4,2,50,411,4096);
+    // 400 Hz internos promediados x4 = 100 muestras/s efectivas.
+    // Antes: 50 Hz / 4 = 12.5 muestras/s (muy poco para detectar latidos).
+    particleSensor.setup(0x1F,4,2,400,411,4096);
     particleSensor.setPulseAmplitudeRed(0x0A);
     particleSensor.setPulseAmplitudeIR(0x0A);
     particleSensor.setPulseAmplitudeGreen(0);
@@ -469,7 +468,8 @@ void readAllSensorsOptimized(){
       curRed=particleSensor.getRed(); curIr=particleSensor.getIR();
       particleSensor.nextSample(); hasNew=true;
       latestIr=curIr; latestRed=curRed; hasNewIrRed=true;
-      if(curIr>50000 && checkForBeat(curIr)){
+      bool beatNow=checkForBeat(curIr);
+      if(curIr>50000 && beatNow){
         long now=millis();
         if(!haveLastBeat){ lastBeat=now; haveLastBeat=true; }
         else {
@@ -563,18 +563,20 @@ void readAllSensorsOptimized(){
   if(bat_filtered>0.5f&&bat_filtered<=BAT_MAX_V){
     if(bat_filtered>=BAT_CRIT_V){
       battery_v=bat_filtered;
+      lowBatCount=0;
       sensorFlags|=FLAG_BAT_VALID;
       if(bat_filtered<BAT_LOW_V) batteryLowWarning=true;
     } else {
       battery_v=bat_filtered;
-      criticalBatShutdown=true;
+      if(lowBatCount<255) lowBatCount++;
+      if(lowBatCount>=50) criticalBatShutdown=true;
     }
   }
   computeFitness(latestIr,latestRed,hasNewIrRed);
   currentAlert=evaluateHomeostasis();
 }
 
-// ── Packet builder ────────────────────────────────────────
+// -- Packet builder ----------------------------------------
 void buildPacket(uint8_t* buf){
   uint32_t now=(millis()/1000)+epoch_offset;
   uint16_t hrv_raw=(sensorFlags&FLAG_HRV_VALID)?(uint16_t)(sdnn_estimate_ms*100.0f):0;
@@ -611,8 +613,18 @@ void buildPacket(uint8_t* buf){
   buf[42]=(crc>>16)&0xFF; buf[43]=(crc>>24)&0xFF;
 }
 
-// ── Fragmentación BLE ─────────────────────────────────────
+// -- Fragmentacion BLE -------------------------------------
+// El MTU se negocia DESPUES de conectar, asi que se vuelve a leer
+// antes de cada paquete en lugar de fiarse del valor de onConnect.
+void refreshMTU(){
+  if(pServer && deviceConnected){
+    uint16_t m=pServer->getPeerMTU(pServer->getConnId());
+    if(m>=23) negotiatedMTU=m;
+  }
+}
+
 void startFragmented(){
+  refreshMTU();
   uint16_t maxPayload=negotiatedMTU>3?negotiatedMTU-3:20;
   if(maxPayload<=6){ fragQ.active=false; return; }
   uint8_t payload=min((uint16_t)FRAG_PAYLOAD,(uint16_t)(maxPayload-6));
@@ -655,7 +667,7 @@ void pumpFragment(){
   if(fragQ.next>=fragQ.total) fragQ.active=false;
 }
 
-// ── Setup ─────────────────────────────────────────────────
+// -- Setup -------------------------------------------------
 void setup(){
   Serial.begin(115200); delay(1000);
   loadDarwinWeights();
@@ -698,10 +710,10 @@ void setup(){
   pAdv->setScanResponse(true);
   BLEDevice::startAdvertising();
 
-  Serial.println("BioSense-Band v5.8.4 Semaforo Haptico - Listo");
+  Serial.println("BioSense-Band v5.8.5 Semaforo Haptico - Listo");
 }
 
-// ── Loop ──────────────────────────────────────────────────
+// -- Loop --------------------------------------------------
 void loop(){
   if(shouldRestartAdv&&millis()-lastAdvRestart>500){
     BLEDevice::startAdvertising();
@@ -716,7 +728,7 @@ void loop(){
   if(millis()-lastSample>=SAMPLE_INTERVAL){
     lastSample=millis();
     readAllSensorsOptimized();
-    if(deviceConnected){
+    if(deviceConnected && !fragQ.active && millis()-lastBLETX>=MIN_TX_INTERVAL_MS){
       bool shouldTX=(fabsf(sdnn_estimate_ms-last_hrv)>1.0f
                    ||fabsf(temp_c-last_temp)>0.1f
                    ||fabsf(experimental_index-last_gluc)>2.0f
@@ -725,7 +737,7 @@ void loop(){
       if(shouldTX){
         buildPacket(packet);
         bool diff=false;
-        for(int i=0;i<40;i++) if(packet[i]!=lastPacket[i]){ diff=true; break; }
+        for(int i=10;i<40;i++) if(packet[i]!=lastPacket[i]){ diff=true; break; }
         if(diff||millis()-lastBLETX>1000){
           startFragmented();
           memcpy(lastPacket,packet,PACKET_SIZE);
@@ -739,4 +751,3 @@ void loop(){
   pumpFragment();
   handleSemaforoLED();
 }
-
