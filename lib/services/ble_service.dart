@@ -133,6 +133,13 @@ class BleService {
   // ==========================================================
 
   Future<void> connect() async {
+    // Si venimos del modo demostracion, el estado es "connected" por el
+    // mock. Hay que apagar el mock primero o el escaneo nunca arranca.
+    if (_mockTimer != null) {
+      await _stopMockTimer();
+      _status = BleConnectionStatus.disconnected;
+    }
+
     if (_status != BleConnectionStatus.disconnected) {
       return;
     }
@@ -159,6 +166,12 @@ class BleService {
       await FlutterBluePlus.startScan(
         timeout: const Duration(seconds: 15),
       );
+
+      // Si el escaneo termino y no se encontro la pulsera, el estado
+      // seguia en "scanning" para siempre. Lo regresamos a desconectado.
+      if (_status == BleConnectionStatus.scanning) {
+        await _handleConnectionFailure();
+      }
     } catch (_) {
       await _handleConnectionFailure();
     }
