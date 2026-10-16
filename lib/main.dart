@@ -111,7 +111,14 @@ class _SplashScreenState extends State<SplashScreen>
       final onboardingDone = prefs.getBool('onboarding_done') ?? false;
       final savedName = prefs.getString('user_name') ?? '';
       final app = Provider.of<AppStateProvider>(context, listen: false);
-      app.connectMockMode();
+      // Demo solo si el usuario lo dejó activado en Config.
+      // Con el modo demo apagado, busca la pulsera real por Bluetooth.
+      final mockMode = prefs.getBool('mock_mode') ?? true;
+      if (mockMode) {
+        app.connectMockMode();
+      } else {
+        app.connectHardware();
+      }
       if (savedName.isNotEmpty) app.setUserName(savedName);
       Navigator.of(context).pushReplacement(
         PageRouteBuilder(
