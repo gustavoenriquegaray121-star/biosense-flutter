@@ -8,6 +8,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/app_state_provider.dart';
+import '../services/ble_service.dart';
 import '../models/health_state.dart';
 import '../design/biosense_theme.dart';
 
@@ -22,7 +23,7 @@ class _MyHealthScreenState extends State<MyHealthScreen>
 
   late Timer _clockTimer;
   DateTime _now = DateTime.now();
-  int _sampleCount = 1248;
+  int _sampleCount = 0;
   double _lastReadingMs = 0.0;
   bool _signalLost = false;
 
@@ -57,10 +58,13 @@ class _MyHealthScreenState extends State<MyHealthScreen>
 
       setState(() {
         _now = DateTime.now();
-        _lastReadingMs = (_lastReadingMs + 0.2) % 10.0;
+        final at = BleService.lastPacketAt;
+        _lastReadingMs = at == null
+            ? 0.0
+            : DateTime.now().difference(at).inMilliseconds / 1000.0;
+        _sampleCount = BleService.packetCount;
         _signalLost = lost;
         if (!lost) {
-          _sampleCount++;
           _updateSparklines(state);
         }
       });
@@ -177,7 +181,7 @@ class _MyHealthScreenState extends State<MyHealthScreen>
                   icon: Icons.favorite_outline,
                   label: isEs ? 'CARDIOVASCULAR' : 'CARDIOVASCULAR',
                   sublabel: isEs ? 'Variabilidad HRV' : 'HRV variability',
-                  value: '72',
+                  value: BleService.bpmText(),
                   unit: 'bpm',
                   reading: state.hrv,
                   sparkData: List.from(_hrvData),
@@ -192,7 +196,7 @@ class _MyHealthScreenState extends State<MyHealthScreen>
                   icon: Icons.thermostat_outlined,
                   label: isEs ? 'TEMPERATURA BASAL' : 'BASELINE TEMPERATURE',
                   sublabel: isEs ? 'Temperatura corporal' : 'Body temperature',
-                  value: '36.6',
+                  value: BleService.tempText(),
                   unit: '°C',
                   reading: state.temp,
                   sparkData: List.from(_tempData),
@@ -207,7 +211,7 @@ class _MyHealthScreenState extends State<MyHealthScreen>
                   icon: Icons.air_outlined,
                   label: isEs ? 'FRECUENCIA RESPIRATORIA' : 'RESPIRATORY RATE',
                   sublabel: isEs ? 'Ciclos por minuto' : 'Cycles per minute',
-                  value: '16',
+                  value: '--',
                   unit: 'rpm',
                   reading: state.resp,
                   sparkData: List.from(_respData),
@@ -222,7 +226,7 @@ class _MyHealthScreenState extends State<MyHealthScreen>
                   icon: Icons.water_drop_outlined,
                   label: isEs ? 'ESTRÉS AUTONÓMICO' : 'AUTONOMIC STRESS INDEX',
                   sublabel: isEs ? 'Actividad del sistema simpático' : 'Sympathetic nervous system activity',
-                  value: '1.2',
+                  value: '--',
                   unit: 'µS',
                   reading: state.gsr,
                   sparkData: List.from(_gsrData),
