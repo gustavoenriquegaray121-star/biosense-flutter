@@ -48,7 +48,62 @@ class BleService {
       'B105E45E-2A7D-4C8A-9F3E-A1B2C3D4E5F6';
 
   static const String epochUuid =
-      'C206F56F-3B8E-4D9B-AF4F-B2C3D4E5F6A';
+      'C206F56F-3B8E-4D9B-AF4F-B2C3D4E5F6A7';
+
+  // ==========================================================
+  // Último paquete REAL recibido de la pulsera.
+  // Las pantallas lo leen para mostrar valores reales.
+  // Si no hay pulsera real conectada, queda en null y las
+  // pantallas muestran "--" (nunca valores inventados).
+  // ==========================================================
+
+  static BioSensePacket? lastPacket;
+  static DateTime? lastPacketAt;
+  static int packetCount = 0;
+
+  static String bpmText() {
+    final p = lastPacket;
+    if (p == null || !p.maxValid) return '--';
+    final bpm = p.heartRateAvg > 0 ? p.heartRateAvg : p.heartRateInstant;
+    return bpm > 0 ? '$bpm' : '--';
+  }
+
+  static String tempText() {
+    final p = lastPacket;
+    if (p == null || !p.mlxValid || p.temperature <= 0) return '--';
+    return p.temperature.toStringAsFixed(1);
+  }
+
+  static void clearLastPacket() {
+    lastPacket = null;
+    lastPacketAt = null;
+    packetCount = 0;
+  }
+
+  // ==========================================================
+  // Línea base para llevar HRV y temperatura a la escala ~1.0
+  // que espera el motor DHSI (1.0 = tu propio valor normal).
+  // Las primeras muestras válidas definen tu base personal.
+  // ==========================================================
+
+  static const int _baseNeeded = 20;
+
+  int _hrvBaseN = 0;
+  double _hrvBaseSum = 0;
+  double _hrvBase = 0;
+
+  int _tempBaseN = 0;
+  double _tempBaseSum = 0;
+  double _tempBase = 0;
+
+  void _resetBaseline() {
+    _hrvBaseN = 0;
+    _hrvBaseSum = 0;
+    _hrvBase = 0;
+    _tempBaseN = 0;
+    _tempBaseSum = 0;
+    _tempBase = 0;
+  }
 
   // ==========================================================
   // Streams públicos
@@ -113,6 +168,13 @@ class BleService {
     }
 
     _status = status;
+
+    // Sin pulsera conectada no debe quedar ningún dato viejo en pantalla.
+    if (status == BleConnectionStatus.disconnected) {
+      clearLastPacket();
+      _resetBaseline();
+    }
+
     _statusCtrl.add(status);
   }
 
@@ -314,10 +376,14 @@ class BleService {
             Endian.little,
           );
 
-          await characteristic.write(
-            bytes,
-            withoutResponse: false,
-          );
+          // La sincronización de hora es opcional: si falla, no debe
+          // cortar la conexión con la pulsera.
+          try {
+            await characteristic.write(
+              bytes,
+              withoutResponse: false,
+            );
+          } catch (_) {}
         }
       }
     }
@@ -361,6 +427,10 @@ class BleService {
       return;
     }
 
+    lastPacket = packet;
+    lastPacketAt = DateTime.now();
+    packetCount++;
+
     _packetCtrl.add(packet);
 
     _emitRawMetrics(packet);
@@ -381,13 +451,44 @@ class BleService {
   // en 1.0 hasta que el contrato del protocolo defina esos
   // canales.
   //
-  // Esto permite compilar y mantener la arquitectura limpia.
+  // El motor DHSI trabaja con escala ~1.0 (1.0 = valor normal
+  // de la persona). Por eso HRV y temperatura se dividen entre
+  // su propia línea base (promedio de las primeras 20 muestras
+  // válidas). Mientras no hay base, o si el sensor no es
+  // válido, el canal se reporta como 1.0 (neutro).
   // ==========================================================
 
   void _emitRawMetrics(BioSensePacket packet) {
+    double hrvN = 1.0;
+    double tempN = 1.0;
+
+    if (packet.hrvValid && packet.hrv > 0) {
+      if (_hrvBaseN < _baseNeeded) {
+        _hrvBaseSum += packet.hrv;
+        _hrvBaseN++;
+        if (_hrvBaseN == _baseNeeded) {
+          _hrvBase = _hrvBaseSum / _baseNeeded;
+        }
+      } else if (_hrvBase > 0) {
+        hrvN = (packet.hrv / _hrvBase).clamp(0.5, 1.5).toDouble();
+      }
+    }
+
+    if (packet.mlxValid && packet.temperature > 0) {
+      if (_tempBaseN < _baseNeeded) {
+        _tempBaseSum += packet.temperature;
+        _tempBaseN++;
+        if (_tempBaseN == _baseNeeded) {
+          _tempBase = _tempBaseSum / _baseNeeded;
+        }
+      } else if (_tempBase > 0) {
+        tempN = (packet.temperature / _tempBase).clamp(0.5, 1.5).toDouble();
+      }
+    }
+
     _rawMetricsCtrl.add({
-      'hrv': packet.hrv,
-      'temp': packet.temperature,
+      'hrv': hrvN,
+      'temp': tempN,
       'resp': 1.0,
       'gsr': 1.0,
     });
@@ -405,6 +506,9 @@ class BleService {
     await _stopMockTimer();
 
     _reassembler.reset();
+
+    clearLastPacket();
+    _resetBaseline();
 
     _setStatus(BleConnectionStatus.connected);
 
