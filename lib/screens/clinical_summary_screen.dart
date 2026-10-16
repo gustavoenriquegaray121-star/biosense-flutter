@@ -10,6 +10,7 @@ import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 import '../providers/app_state_provider.dart';
+import '../services/ble_service.dart';
 import '../models/health_state.dart';
 import '../models/user_profile.dart';
 import '../design/biosense_theme.dart';
@@ -240,7 +241,7 @@ class _ClinicalSummaryScreenState extends State<ClinicalSummaryScreen>
                         '${(state.confidenceLevel*100).toStringAsFixed(2)}%',
                         cyan),
                       _TelRow(isEs ? 'Muestras' : 'Samples',
-                        '${state.cycle + 1248}', cyan),
+                        '${BleService.packetCount}', cyan),
                       _TelRow(isEs ? 'Estabilidad' : 'Stability',
                         statusKey == 'stable'
                           ? (isEs ? 'NORMAL' : 'NORMAL')
@@ -341,22 +342,22 @@ class _ClinicalSummaryScreenState extends State<ClinicalSummaryScreen>
 
               _VitalRow(
                 label: isEs ? 'CARDIOVASCULAR (HRV/FC)' : 'CARDIOVASCULAR (HRV/HR)',
-                value: '72 bpm', delta: '+0.2%',
+                value: '${BleService.bpmText()} bpm', delta: '--',
                 reading: state.hrv, isEs: isEs, cyan: cyan),
               const SizedBox(height: 8),
               _VitalRow(
                 label: isEs ? 'FRECUENCIA RESPIRATORIA' : 'RESPIRATORY RATE',
-                value: '16 rpm', delta: 'CV: 0.04',
+                value: '-- rpm', delta: '--',
                 reading: state.resp, isEs: isEs, cyan: cyan),
               const SizedBox(height: 8),
               _VitalRow(
                 label: isEs ? 'TEMPERATURA BASAL' : 'BASELINE TEMPERATURE',
-                value: '36.6°C', delta: '+0.1°C',
+                value: '${BleService.tempText()}°C', delta: '--',
                 reading: state.temp, isEs: isEs, cyan: cyan),
               const SizedBox(height: 8),
               _VitalRow(
                 label: isEs ? 'RESPUESTA GALVÁNICA (GSR)' : 'GALVANIC RESPONSE (GSR)',
-                value: '1.2 µS', delta: '±0.3',
+                value: '-- µS', delta: '--',
                 reading: state.gsr, isEs: isEs, cyan: cyan),
               const SizedBox(height: 12),
 
@@ -375,7 +376,7 @@ class _ClinicalSummaryScreenState extends State<ClinicalSummaryScreen>
                   _TelRow(isEs ? 'Perfil' : 'Profile',
                     _profileName(app.currentProfile, isEs), Colors.white70),
                   _TelRow(isEs ? 'Ciclos de sesión' : 'Session cycles',
-                    '${state.cycle + 1248}', cyan),
+                    '${state.cycle}', cyan),
                   _TelRow(isEs ? 'Línea base' : 'Baseline',
                     app.baselineLocked
                       ? (isEs ? 'ESTABLECIDA' : 'LOCKED')
