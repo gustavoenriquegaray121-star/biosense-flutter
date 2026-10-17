@@ -225,9 +225,27 @@ class BleService {
         },
       );
 
-      await FlutterBluePlus.startScan(
-        timeout: const Duration(seconds: 15),
-      );
+      // Hasta 2 intentos de escaneo. Si el primero no la ve (por ejemplo
+      // porque la pulsera todavía estaba arrancando), reintenta una vez.
+      for (int attempt = 0; attempt < 2; attempt++) {
+        if (_status != BleConnectionStatus.scanning) {
+          return;
+        }
+
+        await FlutterBluePlus.startScan(
+          timeout: const Duration(seconds: 12),
+        );
+
+        // Esperar a que el escaneo termine de verdad (con o sin que
+        // startScan haya esperado por su cuenta).
+        await FlutterBluePlus.isScanning
+            .where((s) => s == false)
+            .first
+            .timeout(
+              const Duration(seconds: 20),
+              onTimeout: () => false,
+            );
+      }
 
       // Si el escaneo termino y no se encontro la pulsera, el estado
       // seguia en "scanning" para siempre. Lo regresamos a desconectado.
@@ -255,8 +273,15 @@ class BleService {
       final deviceNameFromAdvertisement =
           result.advertisementData.localName.trim();
 
+      // La pulsera se reconoce por nombre o por su servicio BioSense
+      // (el servicio viaja en el anuncio aunque el nombre llegue tarde).
+      final hasService = result.advertisementData.serviceUuids.any(
+        (u) => u.toString().toUpperCase() == serviceUuid.toUpperCase(),
+      );
+
       if (deviceNameFromPlatform == deviceName ||
-          deviceNameFromAdvertisement == deviceName) {
+          deviceNameFromAdvertisement == deviceName ||
+          hasService) {
         target = result;
         break;
       }
@@ -266,16 +291,19 @@ class BleService {
       return;
     }
 
+    // Cambiar el estado ANTES de cualquier espera, para que otro
+    // resultado de escaneo que llegue enseguida no inicie una segunda
+    // conexión al mismo tiempo.
+    _device = target.device;
+
+    _setStatus(BleConnectionStatus.connecting);
+
     await _scanSub?.cancel();
     _scanSub = null;
 
     try {
       await FlutterBluePlus.stopScan();
     } catch (_) {}
-
-    _device = target.device;
-
-    _setStatus(BleConnectionStatus.connecting);
 
     await _connectDevice(target.device);
   }
